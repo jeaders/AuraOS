@@ -42,6 +42,7 @@ class WebOSApp {
 
     init() {
         this.initFilesystem();
+        this.initSoundEngine();
         this.setupEventListeners();
         this.updateClock();
         setInterval(() => this.updateClock(), 1000);
@@ -55,7 +56,34 @@ class WebOSApp {
     initFilesystem() {
         const saved = localStorage.getItem('webos_filesystem');
         if (saved) {
-            this.state.filesystem = JSON.parse(saved);
+            try {
+                this.state.filesystem = JSON.parse(saved);
+            } catch (e) {
+                this.state.filesystem = {
+                    '/': {
+                        type: 'folder',
+                        name: 'Home',
+                        children: {
+                            'Documenti': {
+                                type: 'folder',
+                                name: 'Documenti',
+                                children: {
+                                    'Lettera.txt': { type: 'file', name: 'Lettera.txt', content: 'Caro amico,\n\nQuesta è una lettera di prova nel File Manager simulato!' },
+                                }
+                            },
+                            'Immagini': { type: 'folder', name: 'Immagini', children: {} },
+                            'Musica': { type: 'folder', name: 'Musica', children: {} },
+                            'Progetto': {
+                                type: 'folder',
+                                name: 'Progetto',
+                                children: {
+                                    'Note.txt': { type: 'file', name: 'Note.txt', content: 'Appunti del progetto...' },
+                                }
+                            },
+                        }
+                    }
+                };
+            }
         } else {
             this.state.filesystem = {
                 '/': {
@@ -93,7 +121,11 @@ class WebOSApp {
     }
 
     saveFilesystem() {
-        localStorage.setItem('webos_filesystem', JSON.stringify(this.state.filesystem));
+        try {
+            localStorage.setItem('webos_filesystem', JSON.stringify(this.state.filesystem));
+        } catch (e) {
+            // Ignore storage errors
+        }
     }
 
     setupEventListeners() {
@@ -183,6 +215,10 @@ class WebOSApp {
     }
 
     boot() {
+        const bootScreen = document.getElementById('boot-screen');
+        if (bootScreen) {
+            bootScreen.classList.add('hidden');
+        }
         const desktop = document.getElementById('desktop');
         const taskbar = document.getElementById('taskbar');
         const startMenuUser = document.getElementById('start-menu-user');
@@ -266,7 +302,12 @@ class WebOSApp {
         widget.id = 'weather-widget';
         widget.className = 'weather-widget';
         const cached = localStorage.getItem('webos_weather');
-        const weatherData = cached ? JSON.parse(cached) : this.generateWeatherData();
+        let weatherData;
+        try {
+            weatherData = cached ? JSON.parse(cached) : this.generateWeatherData();
+        } catch (e) {
+            weatherData = this.generateWeatherData();
+        }
         localStorage.setItem('webos_weather', JSON.stringify(weatherData));
         widget.innerHTML = this.getWeatherWidgetHTML(weatherData);
         const desktop = document.getElementById('desktop');
@@ -531,7 +572,10 @@ class WebOSApp {
 
     getAudioContext() {
         if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                this.audioContext = new AudioContextClass();
+            }
         }
         return this.audioContext;
     }
@@ -540,6 +584,7 @@ class WebOSApp {
         if (!this.state.soundsEnabled) return;
         try {
             const ctx = this.getAudioContext();
+            if (!ctx) return;
             const now = ctx.currentTime;
             const sounds = {
                 click: () => {
