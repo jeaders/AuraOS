@@ -1230,20 +1230,23 @@ class WebOSApp {
                 <div class="calc-buttons">
                     <button class="calc-btn calc-clear" onclick="app.calcClear('${windowId}')">C</button>
                     <button class="calc-btn calc-op" onclick="app.calcBackspace('${windowId}')">⌫</button>
-                    <button class="calc-btn calc-op" onclick="app.calcInput('${windowId}', '/')">/</button>
-                    <button class="calc-btn calc-op" onclick="app.calcInput('${windowId}', '*')">×</button>
+                    <button class="calc-btn calc-func" onclick="app.calcSqrt('${windowId}')">√</button>
+                    <button class="calc-btn calc-func" onclick="app.calcPercent('${windowId}')">%</button>
+                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '/')">÷</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '7')">7</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '8')">8</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '9')">9</button>
-                    <button class="calc-btn calc-op" onclick="app.calcInput('${windowId}', '-')">-</button>
+                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '*')">×</button>
+                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '-')">-</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '4')">4</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '5')">5</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '6')">6</button>
-                    <button class="calc-btn calc-op" onclick="app.calcInput('${windowId}', '+')">+</button>
+                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '+')">+</button>
+                    <button class="calc-btn calc-equal" onclick="app.calcEqual('${windowId}')">=</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '1')">1</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '2')">2</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '3')">3</button>
-                    <button class="calc-btn calc-equal" onclick="app.calcEqual('${windowId}')">=</button>
+                    <button class="calc-btn calc-func" onclick="app.calcSignToggle('${windowId}')">±</button>
                     <button class="calc-btn calc-zero" onclick="app.calcInput('${windowId}', '0')">0</button>
                     <button class="calc-btn" onclick="app.calcInput('${windowId}', '.')">.</button>
                 </div>
@@ -1354,6 +1357,49 @@ class WebOSApp {
         display.textContent = calc.current;
     }
 
+    calcPercent(windowId) {
+        const calc = this.calculators[windowId];
+        const display = document.getElementById(`calc-display-${windowId}`);
+        if (!calc || !display) return;
+
+        const value = parseFloat(calc.current);
+        if (isNaN(value)) return;
+
+        calc.current = String(value / 100);
+        display.textContent = calc.current;
+    }
+
+    calcSqrt(windowId) {
+        const calc = this.calculators[windowId];
+        const display = document.getElementById(`calc-display-${windowId}`);
+        if (!calc || !display) return;
+
+        const value = parseFloat(calc.current);
+        if (isNaN(value) || value < 0) {
+            calc.current = 'Errore';
+            display.textContent = 'Errore';
+            return;
+        }
+
+        calc.current = String(Math.sqrt(value));
+        display.textContent = calc.current;
+    }
+
+    calcSignToggle(windowId) {
+        const calc = this.calculators[windowId];
+        const display = document.getElementById(`calc-display-${windowId}`);
+        if (!calc || !display) return;
+
+        if (calc.current === '0' || calc.current === 'Errore') return;
+
+        if (calc.current.startsWith('-')) {
+            calc.current = calc.current.slice(1);
+        } else {
+            calc.current = '-' + calc.current;
+        }
+        display.textContent = calc.current;
+    }
+
     // ===== Tutor Helper Methods =====
     getTutorWelcomeMessage(appId) {
         const messages = {
@@ -1363,7 +1409,7 @@ class WebOSApp {
             'settings': 'Nelle Impostazioni puoi personalizzare il computer: cambia lo sfondo, la dimensione delle icone e la modalità!',
             'guide': 'Benvenuto nella Guida! Ti accompagnerò passo passo alla scoperta del computer. Iniziamo?',
             'games': 'Ecco i Giochi! Qui impari divertendoti. Scegli un gioco e buon divertimento!',
-            'calculator': 'Ecco la Calcolatrice! Puoi fare addizioni, sottrazioni, moltiplicazioni e divisioni in modo semplice e veloce.',
+            'calculator': 'Ecco la Calcolatrice! Puoi fare addizioni, sottrazioni, moltiplicazioni, divisioni, percentuali, radici quadrate e cambiare il segno. Provaci!',
         };
         return messages[appId] || 'Benvenuto!';
     }

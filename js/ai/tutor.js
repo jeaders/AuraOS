@@ -36,12 +36,18 @@ class TutorAI {
                 'come si va a un sito': 'Nel Browser simulato, scrivi l\'indirizzo nella barra in alto e premi Invio. Oppure clicca sui link!',
                 'cosa è un link': 'Un link è come un passaggio segreto: cliccandolo vai a un\'altra pagina web! Di solito è blu e sottolineato.',
                 'come si torna indietro': 'Per tornare indietro nel browser, clicca la freccia ←. Oppure usa il pulsante "Indietro" del browser.',
+                'come si usa la calcolatrice': 'Nella Calcolatrice puoi fare operazioni di base: addizioni, sottrazioni, moltiplicazioni e divisioni. Premi i numeri, poi l\'operatore, poi = per avere il risultato!',
+                'come si calcola la percentuale': 'Per calcolare la percentuale, digita il numero e premi il pulsante %. Per esempio: 50 % = 0,50',
+                'come si calcola la radice quadrata': 'Per calcolare la radice quadrata, digita il numero e premi il pulsante √. Per esempio: √9 = 3',
+                'come si cambia il segno': 'Per cambiare il segno di un numero (da positivo a negativo o viceversa), digita il numero e premi il pulsante ±.',
             },
             bambino: {
                 'cosa è il computer': 'Il computer è una macchina magica che ti permette di disegnare, giocare, imparare e tanto altro!',
                 'come si gioca': 'Vai nel menu Giochi! Ci sono tanti giochi divertenti dove impari cose nuove mentre ti diverti!',
                 'come si disegna': 'Al momento non abbiamo un\'app per disegnare, ma stiamo lavorando per aggiungerla! Intanto puoi esplorare le altre app.',
                 'perché devo imparare': 'Imparare a usare il computer è come imparare ad andare in bicicletta: una volta che lo sai, puoi fare tantissime cose!',
+                'come si usa la calcolatrice': 'La Calcolatrice serve per fare i compiti di matematica! Prova a fare 2 + 2 e premi = per vedere il risultato!',
+                'come si gioca a trascina nella cartella': 'Trascina i file nella cartella giusta! Ogni file appartiene a una cartella: le foto vanno in Immagini, i documenti in Documenti e la musica in Musica!',
             },
             anziano: {
                 'cosa è il computer': 'Il computer è uno strumento utile per rimanere in contatto con i parenti, leggere notizie e fare tante cose comodamente da casa.',
@@ -50,6 +56,7 @@ class TutorAI {
                 'come si chiede aiuto': 'Sono qui per te! Chiedimi qualsiasi cosa e ti risponderò con parole semplici e pazienti. Non hai paura di sbagliare!',
                 'come si stampa': 'Al momento la stampa non è disponibile in questo simulatore. Ma se impari qui, potrai stampare anche su un computer vero!',
                 'come si invia una email': 'Questa è una versione base, ma se impari a usare il browser qui, potrai inviare email su un computer vero senza difficoltà!',
+                'come si usa la calcolatrice': 'La Calcolatrice è utile per fare conti veloci: spese, cambi di valuta, percentuali di sconto. Premi i numeri, l\'operazione e poi =!',
             }
         };
 
@@ -139,17 +146,21 @@ class TutorAI {
                 'Come si gioca?',
                 'Cosa è il desktop?',
                 'Come si apre un\'app?',
+                'Come si usa la calcolatrice?',
             ],
             anziano: [
                 'Come si usa il computer?',
                 'Come si ingrandisce il testo?',
                 'Come si chiede aiuto?',
                 'Cosa posso fare qui?',
+                'Come si usa la calcolatrice?',
             ],
             adulto: [
                 'Come funziona il desktop?',
                 'Come si usa il file manager?',
                 'Cosa posso imparare?',
+                'Come si usa la calcolatrice?',
+                'Come si calcola una percentuale?',
             ]
         };
 
@@ -187,6 +198,36 @@ class TutorAI {
                 title: 'Le Finestre',
                 text: 'Quando apri un\'app, si apre una "finestra". Puoi spostarla tenendo premuto il titolo blu, e chiuderla con il pulsante X rosso.',
                 target: '#window-container',
+            },
+            {
+                title: 'File e Cartelle',
+                text: 'Nel File Manager puoi creare cartelle, creare file, e organizzare i tuoi documenti. È come un armadio digitale! Prova ad aprire l\'app "File e cartelle".',
+                target: null,
+            },
+            {
+                title: 'Internet Sicuro',
+                text: 'Il Browser simulato ti permette di esplorare pagine sicure per imparare cos\'è Internet. Qui non ci sono pericoli: è tutto controllato!',
+                target: null,
+            },
+            {
+                title: 'La Calcolatrice',
+                text: 'Nella Calcolatrice puoi fare operazioni matematiche: addizioni, sottrazioni, moltiplicazioni e divisioni. Inoltre, puoi calcolare percentuali con %, radici quadrate con √, e cambiare il segno con ±.',
+                target: null,
+            },
+            {
+                title: 'Personalizzazione',
+                text: 'Nelle Impostazioni puoi cambiare lo sfondo, la dimensione delle icone e la modalità (Bambino, Adulto, Anziano). Il computer si adatta a te!',
+                target: null,
+            },
+            {
+                title: 'Il Tutor AI',
+                text: 'Sono qui per aiutarti in qualsiasi momento! Puoi chiedermi qualsiasi cosa nella chat, o cliccare sulle domande suggerite.',
+                target: null,
+            },
+            {
+                title: 'Giochi Educativi',
+                text: 'Nell\'app Giochi puoi divertirti mentre impari: prova "Trascina nella cartella" per esercitarti con i file, o "Indovina a cosa serve" per imparare le icone!',
+                target: null,
             },
             {
                 title: 'Pronto!',

@@ -1022,7 +1022,7 @@ body {
 
 .calc-buttons {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
 }
 
@@ -1059,6 +1059,14 @@ body {
 
 .calc-btn.calc-equal:hover {
     background: #38a169;
+}
+
+.calc-btn.calc-func {
+    background: #805ad5;
+}
+
+.calc-btn.calc-func:hover {
+    background: #6b46c1;
 }
 
 .calc-btn.calc-zero {
