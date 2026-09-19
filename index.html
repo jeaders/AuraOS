@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebOS Educativo</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Boot Screen -->
+    <div id="boot-screen" class="boot-screen">
+        <div class="boot-content">
+            <div class="boot-logo">💻</div>
+            <h1 class="boot-title">WebOS Educativo</h1>
+            <p class="boot-subtitle">Il tuo primo computer virtuale</p>
+            <div class="boot-progress">
+                <div class="boot-progress-bar" id="boot-progress-bar"></div>
+            </div>
+            <div id="profile-select" class="profile-select" style="display:none;">
+                <p>Chi sei?</p>
+                <div class="profile-buttons">
+                    <button class="profile-btn" data-profile="bambino" onclick="app.selectProfile('bambino')">
+                        <span class="profile-icon">👦</span>
+                        <span>Bambino</span>
+                    </button>
+                    <button class="profile-btn" data-profile="adulto" onclick="app.selectProfile('adulto')">
+                        <span class="profile-icon">👤</span>
+                        <span>Adulto</span>
+                    </button>
+                    <button class="profile-btn" data-profile="anziano" onclick="app.selectProfile('anziano')">
+                        <span class="profile-icon">👴</span>
+                        <span>Anziano</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desktop -->
+    <div id="desktop" class="desktop hidden">
+        <div id="desktop-icons" class="desktop-icons"></div>
+        <div id="window-container" class="window-container"></div>
+    </div>
+
+    <!-- Taskbar -->
+    <div id="taskbar" class="taskbar hidden">
+        <button id="start-btn" class="start-btn" onclick="app.toggleStartMenu()">
+            <span class="start-icon">🪟</span>
+            <span class="start-text">Menu</span>
+        </button>
+        <div id="taskbar-apps" class="taskbar-apps"></div>
+        <div class="taskbar-right">
+            <span id="taskbar-clock" class="taskbar-clock"></span>
+        </div>
+    </div>
+
+    <!-- Start Menu -->
+    <div id="start-menu" class="start-menu hidden">
+        <div class="start-menu-header">
+            <span id="start-menu-user" class="start-menu-user">👤 Utente</span>
+        </div>
+        <div class="start-menu-items" id="start-menu-items">
+            <button class="start-menu-item" onclick="app.openApp('file-manager')">
+                <span class="start-menu-icon">📁</span>
+                <span>File e cartelle</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('browser')">
+                <span class="start-menu-icon">🌐</span>
+                <span>Internet</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('tutor')">
+                <span class="start-menu-icon">🤖</span>
+                <span>Tutor AI</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('guide')">
+                <span class="start-menu-icon">📖</span>
+                <span>Guida</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('settings')">
+                <span class="start-menu-icon">⚙️</span>
+                <span>Impostazioni</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('games')">
+                <span class="start-menu-icon">🎮</span>
+                <span>Giochi</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('calculator')">
+                <span class="start-menu-icon">🧮</span>
+                <span>Calcolatrice</span>
+            </button>
+            <div class="start-menu-separator"></div>
+            <button class="start-menu-item start-menu-item-danger" onclick="app.shutdown()">
+                <span class="start-menu-icon">🔌</span>
+                <span>Spegni</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Shutdown Screen -->
+    <div id="shutdown-screen" class="shutdown-screen hidden">
+        <div class="shutdown-content">
+            <div class="shutdown-icon">💤</div>
+            <p class="shutdown-text">Arrivederci!</p>
+            <button class="shutdown-btn" onclick="app.wakeUp()">Riaccendi</button>
+        </div>
+    </div>
+
+    <!-- Tutor Bubble (floating contextual help) -->
+    <div id="tutor-bubble" class="tutor-bubble hidden">
+        <div class="tutor-bubble-content" id="tutor-bubble-content"></div>
+        <button class="tutor-bubble-close" onclick="app.hideTutorBubble()">✕</button>
+    </div>
+
+    <!-- Voice button -->
+    <button id="voice-btn" class="voice-btn hidden" onclick="app.toggleVoice()" title="Ascolta">
+        🔊
+    </button>
+
+    <script src="js/ai/tutor.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
