@@ -40,6 +40,11 @@
     <div id="desktop" class="desktop hidden">
         <div id="desktop-icons" class="desktop-icons"></div>
         <div id="window-container" class="window-container"></div>
+        <div id="clock-widget" class="clock-widget hidden" onclick="app.toggleCalendarWidget()">
+            <div class="clock-widget-time" id="clock-widget-time"></div>
+            <div class="clock-widget-date" id="clock-widget-date"></div>
+            <div class="clock-widget-calendar hidden" id="clock-widget-calendar"></div>
+        </div>
     </div>
 
     <!-- Taskbar -->
@@ -91,6 +96,14 @@
             <button class="start-menu-item" onclick="app.openApp('notepad')">
                 <span class="start-menu-icon">📝</span>
                 <span>Blocco Note</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('terminal')">
+                <span class="start-menu-icon">💻</span>
+                <span>Terminale</span>
+            </button>
+            <button class="start-menu-item" onclick="app.openApp('task-manager')">
+                <span class="start-menu-icon">📊</span>
+                <span>Task Manager</span>
             </button>
             <div class="start-menu-separator"></div>
             <button class="start-menu-item start-menu-item-danger" onclick="app.shutdown()">

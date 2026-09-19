@@ -40,6 +40,8 @@ class TutorAI {
                 'come si calcola la percentuale': 'Per calcolare la percentuale, digita il numero e premi il pulsante %. Per esempio: 50 % = 0,50',
                 'come si calcola la radice quadrata': 'Per calcolare la radice quadrata, digita il numero e premi il pulsante √. Per esempio: √9 = 3',
                 'come si cambia il segno': 'Per cambiare il segno di un numero (da positivo a negativo o viceversa), digita il numero e premi il pulsante ±.',
+                'come si usa il terminale': 'Il Terminale ti permette di scrivere comandi per interagire con il computer. Prova "help" per vedere tutti i comandi disponibili!',
+                'come si usa il task manager': 'Il Task Manager mostra tutte le app aperte, quanta memoria e CPU usano, e ti permette di chiudere le app che non servono piu.',
             },
             bambino: {
                 'cosa è il computer': 'Il computer è una macchina magica che ti permette di disegnare, giocare, imparare e tanto altro!',
@@ -222,6 +224,16 @@ class TutorAI {
             {
                 title: 'Il Tutor AI',
                 text: 'Sono qui per aiutarti in qualsiasi momento! Puoi chiedermi qualsiasi cosa nella chat, o cliccare sulle domande suggerite.',
+                target: null,
+            },
+            {
+                title: 'Il Terminale',
+                text: 'Il Terminale è come la riga di comando di un vero computer. Puoi scrivere comandi come ls, cd, mkdir, cat e tanti altri! Prova a scrivere "neofetch" per una sorpresa!',
+                target: null,
+            },
+            {
+                title: 'Task Manager',
+                text: 'Il Task Manager ti mostra tutte le app aperte, la memoria usata e l\'uso della CPU. Puoi anche chiudere le app che non ti servono piu!',
                 target: null,
             },
             {

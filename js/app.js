@@ -15,11 +15,14 @@ class WebOSApp {
             tutorAI: null,
             contextMenuOpen: false,
             currentSnapWindow: null,
+            bootTime: Date.now(),
         };
 
         this.desktopApps = [
             { id: 'file-manager', name: 'File e cartelle', icon: '📁', description: 'Gestisci i tuoi file' },
             { id: 'notepad', name: 'Blocco Note', icon: '📝', description: 'Scrivi appunti e note' },
+            { id: 'terminal', name: 'Terminale', icon: '💻', description: 'Usa la riga di comando' },
+            { id: 'task-manager', name: 'Task Manager', icon: '📊', description: 'Monitora le app aperte' },
             { id: 'browser', name: 'Internet', icon: '🌐', description: 'Esplora il web' },
             { id: 'tutor', name: 'Tutor AI', icon: '🤖', description: 'Il tuo assistente' },
             { id: 'settings', name: 'Impostazioni', icon: '⚙️', description: 'Personalizza' },
@@ -34,6 +37,9 @@ class WebOSApp {
             green: 'linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)',
             purple: 'linear-gradient(135deg, #834d9b 0%, #d04ed6 100%)',
             orange: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            aurora: 'aurora',
+            ocean: 'ocean',
+            matrix: 'matrix',
         };
 
         this.tutorAI = new TutorAI();
@@ -234,6 +240,7 @@ class WebOSApp {
         this.createDesktopIcons();
         this.initWeatherWidget();
         this.initParallax();
+        this.initClockWidget();
         setTimeout(() => {
             this.showTutorMessage('Ciao! Benvenuto nel WebOS Educativo! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare un tour, oppure esplora pure le app!');
         }, 1000);
@@ -249,6 +256,8 @@ class WebOSApp {
     handleParallax(e) {
         const desktop = document.getElementById('desktop');
         if (!desktop) return;
+        const animatedWallpapers = ['aurora', 'ocean', 'matrix'];
+        if (animatedWallpapers.includes(this.state.wallpaper)) return;
         const x = (e.clientX / window.innerWidth - 0.5) * 10;
         const y = (e.clientY / window.innerHeight - 0.5) * 10;
         desktop.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
@@ -256,7 +265,14 @@ class WebOSApp {
 
     applySettings() {
         const desktop = document.getElementById('desktop');
-        desktop.style.background = this.wallpapers[this.state.wallpaper] || this.wallpapers.gradient;
+        desktop.classList.remove('wallpaper-aurora', 'wallpaper-ocean', 'wallpaper-matrix');
+        const animatedWallpapers = ['aurora', 'ocean', 'matrix'];
+        if (animatedWallpapers.includes(this.state.wallpaper)) {
+            desktop.style.background = '#000';
+            desktop.classList.add(`wallpaper-${this.state.wallpaper}`);
+        } else {
+            desktop.style.background = this.wallpapers[this.state.wallpaper] || this.wallpapers.gradient;
+        }
         const icons = document.querySelectorAll('.desktop-icon');
         icons.forEach(icon => {
             icon.classList.remove('size-large', 'size-small');
@@ -713,8 +729,8 @@ class WebOSApp {
             icon: appConfig.icon,
             x: 50 + (this.state.openWindows.length * 30),
             y: 50 + (this.state.openWindows.length * 30),
-            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : 600,
-            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : 450,
+            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : appId === 'terminal' ? 700 : appId === 'task-manager' ? 600 : 600,
+            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : appId === 'terminal' ? 450 : appId === 'task-manager' ? 500 : 450,
             minimized: false,
             maximized: false,
             prevX: null,
@@ -771,6 +787,10 @@ class WebOSApp {
                 return this.getFileManagerContent(windowId);
             case 'notepad':
                 return this.getNotepadContent(windowId);
+            case 'terminal':
+                return this.getTerminalContent(windowId);
+            case 'task-manager':
+                return this.getTaskManagerContent(windowId);
             case 'browser':
                 return this.getBrowserContent(windowId);
             case 'tutor':
@@ -1017,7 +1037,614 @@ class WebOSApp {
         }
     }
 
-    // ===== App Implementations =====
+    // ===== Terminal App =====
+    getTerminalContent(windowId) {
+        return `
+            <div class="terminal-wrapper" id="terminal-wrapper-${windowId}">
+                <div class="terminal-header">
+                    <span class="terminal-header-dot red"></span>
+                    <span class="terminal-header-dot yellow"></span>
+                    <span class="terminal-header-dot green"></span>
+                    <span class="terminal-header-title">Terminale - bash</span>
+                </div>
+                <div class="terminal-body" id="terminal-body-${windowId}">
+                    <div class="terminal-output" id="terminal-output-${windowId}"></div>
+                    <div class="terminal-input-line">
+                        <span class="terminal-prompt" id="terminal-prompt-${windowId}">utente@webos:~$&nbsp;</span>
+                        <input type="text" class="terminal-input" id="terminal-input-${windowId}" autocomplete="off" spellcheck="false" autofocus>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    initTerminal(windowId) {
+        const input = document.getElementById(`terminal-input-${windowId}`);
+        const output = document.getElementById(`terminal-output-${windowId}`);
+        const body = document.getElementById(`terminal-body-${windowId}`);
+        if (!input || !output) return;
+
+        this.terminalState = this.terminalState || {};
+        this.terminalState[windowId] = {
+            cwd: '/',
+            history: [],
+            historyIndex: -1,
+        };
+        const ts = this.terminalState[windowId];
+
+        const welcomeLines = [
+            { type: 'welcome', text: 'WebOS Educativo - Terminale v1.0' },
+            { type: 'welcome', text: 'Digita "help" per vedere i comandi disponibili.' },
+            { type: 'blank' },
+        ];
+        welcomeLines.forEach(l => this.terminalPrint(windowId, l.text, l.type));
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const cmd = input.value.trim();
+                input.value = '';
+                if (cmd) {
+                    ts.history.push(cmd);
+                    ts.historyIndex = ts.history.length;
+                    this.terminalPrint(windowId, `utente@webos:${ts.cwd === '/' ? '~' : ts.cwd}$ ${cmd}`, 'command');
+                }
+                this.terminalExecute(windowId, cmd);
+                input.focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (ts.historyIndex > 0) {
+                    ts.historyIndex--;
+                    input.value = ts.history[ts.historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (ts.historyIndex < ts.history.length - 1) {
+                    ts.historyIndex++;
+                    input.value = ts.history[ts.historyIndex];
+                } else {
+                    ts.historyIndex = ts.history.length;
+                    input.value = '';
+                }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                this.terminalTabComplete(windowId, input.value);
+            }
+        });
+
+        input.addEventListener('focus', () => {
+            if (body) body.classList.add('focused');
+        });
+        input.addEventListener('blur', () => {
+            if (body) body.classList.remove('focused');
+        });
+
+        body.addEventListener('click', (e) => {
+            if (e.target === body || e.target.classList.contains('terminal-output')) {
+                input.focus();
+            }
+        });
+
+        input.focus();
+    }
+
+    terminalPrint(windowId, text, type = 'output') {
+        const output = document.getElementById(`terminal-output-${windowId}`);
+        if (!output) return;
+        const line = document.createElement('div');
+        line.className = `terminal-line terminal-${type}`;
+        line.textContent = text;
+        output.appendChild(line);
+        const body = document.getElementById(`terminal-body-${windowId}`);
+        if (body) body.scrollTop = body.scrollHeight;
+    }
+
+    terminalExecute(windowId, cmdLine) {
+        const ts = this.terminalState[windowId];
+        if (!cmdLine) return;
+        const parts = cmdLine.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+        const cmd = parts[0] ? parts[0].toLowerCase() : '';
+        const args = parts.slice(1).map(a => a.replace(/^"|"$/g, ''));
+
+        switch (cmd) {
+            case 'help':
+                this.terminalPrint(windowId, 'Comandi disponibili:', 'output');
+                const cmds = [
+                    ['help', 'Mostra questo messaggio'],
+                    ['ls', 'Lista il contenuto della cartella corrente'],
+                    ['cd <cartella>', 'Cambia cartella'],
+                    ['pwd', 'Mostra il percorso corrente'],
+                    ['mkdir <nome>', 'Crea una nuova cartella'],
+                    ['touch <nome>', 'Crea un nuovo file vuoto'],
+                    ['cat <file>', 'Legge il contenuto di un file'],
+                    ['echo <testo>', 'Stampa a schermo il testo'],
+                    ['clear', 'Pulisce lo schermo'],
+                    ['whoami', 'Mostra l\'utente corrente'],
+                    ['date', 'Mostra data e ora correnti'],
+                    ['neofetch', 'Mostra informazioni di sistema'],
+                    ['rm <nome>', 'Elimina un file o cartella'],
+                    ['history', 'Mostra la cronologia comandi'],
+                ];
+                cmds.forEach(([c, d]) => this.terminalPrint(windowId, `  ${c.padEnd(20)} ${d}`, 'output'));
+                break;
+
+            case 'ls': {
+                const folder = this.getFolderByPath(ts.cwd);
+                if (!folder || !folder.children || Object.keys(folder.children).length === 0) {
+                    this.terminalPrint(windowId, '(cartella vuota)', 'output');
+                } else {
+                const items = Object.entries(folder.children).map(([name, item]) =>
+                    item.type === 'folder' ? `${name}/` : name
+                );
+                    this.terminalPrint(windowId, items.join('  '), 'output');
+                }
+                break;
+            }
+            case 'cd': {
+                if (!args[0] || args[0] === '~') {
+                    ts.cwd = '/';
+                } else if (args[0] === '..') {
+                    if (ts.cwd !== '/') {
+                        const parts = ts.cwd.split('/').filter(Boolean);
+                        parts.pop();
+                        ts.cwd = parts.length === 0 ? '/' : '/' + parts.join('/');
+                    }
+                } else if (args[0].startsWith('/')) {
+                    const folder = this.getFolderByPath(args[0]);
+                    if (folder && folder.type === 'folder') {
+                        ts.cwd = args[0];
+                    } else {
+                        this.terminalPrint(windowId, `cd: ${args[0]}: Nessuna tale directory`, 'error');
+                    }
+                } else {
+                    const newPath = ts.cwd === '/' ? `/${args[0]}` : `${ts.cwd}/${args[0]}`;
+                    const folder = this.getFolderByPath(newPath);
+                    if (folder && folder.type === 'folder') {
+                        ts.cwd = newPath;
+                    } else {
+                        this.terminalPrint(windowId, `cd: ${args[0]}: Nessuna tale directory`, 'error');
+                    }
+                }
+                this.terminalUpdatePrompt(windowId);
+                break;
+            }
+            case 'pwd':
+                this.terminalPrint(windowId, ts.cwd, 'output');
+                break;
+
+            case 'mkdir': {
+                if (!args[0]) {
+                    this.terminalPrint(windowId, 'mkdir: manca il nome della cartella', 'error');
+                    break;
+                }
+                const folder = this.getFolderByPath(ts.cwd);
+                if (folder && folder.children) {
+                    if (folder.children[args[0]]) {
+                        this.terminalPrint(windowId, `mkdir: impossibile creare "${args[0]}": File esistente`, 'error');
+                    } else {
+                        folder.children[args[0]] = { type: 'folder', name: args[0], children: {} };
+                        this.saveFilesystem();
+                        this.terminalPrint(windowId, '', 'output');
+                    }
+                }
+                break;
+            }
+            case 'touch': {
+                if (!args[0]) {
+                    this.terminalPrint(windowId, 'touch: manca il nome del file', 'error');
+                    break;
+                }
+                const folder = this.getFolderByPath(ts.cwd);
+                if (folder && folder.children) {
+                    if (!folder.children[args[0]]) {
+                        folder.children[args[0]] = { type: 'file', name: args[0], content: '' };
+                        this.saveFilesystem();
+                    }
+                }
+                break;
+            }
+            case 'cat': {
+                if (!args[0]) {
+                    this.terminalPrint(windowId, 'cat: manca il nome del file', 'error');
+                    break;
+                }
+                const fPath = args[0].startsWith('/') ? args[0] : ts.cwd === '/' ? `/${args[0]}` : `${ts.cwd}/${args[0]}`;
+                const fileFolder = this.getFolderByPath(fPath.substring(0, fPath.lastIndexOf('/')) || '/');
+                const fileName = fPath.substring(fPath.lastIndexOf('/') + 1);
+                if (fileFolder && fileFolder.children && fileFolder.children[fileName]) {
+                    const f = fileFolder.children[fileName];
+                    if (f.type === 'folder') {
+                        this.terminalPrint(windowId, `cat: ${fileName}: è una directory`, 'error');
+                    } else {
+                        this.terminalPrint(windowId, f.content || '', 'output');
+                    }
+                } else {
+                    this.terminalPrint(windowId, `cat: ${args[0]}: Nessun tale file o directory`, 'error');
+                }
+                break;
+            }
+            case 'echo':
+                this.terminalPrint(windowId, args.join(' '), 'output');
+                break;
+
+            case 'clear': {
+                const out = document.getElementById(`terminal-output-${windowId}`);
+                if (out) out.innerHTML = '';
+                break;
+            }
+            case 'whoami':
+                this.terminalPrint(windowId, this.state.profile || 'utente', 'output');
+                break;
+
+            case 'date':
+                this.terminalPrint(windowId, new Date().toString(), 'output');
+                break;
+
+            case 'neofetch':
+                this.terminalNeofetch(windowId);
+                break;
+
+            case 'rm': {
+                if (!args[0]) {
+                    this.terminalPrint(windowId, 'rm: manca l\'operando', 'error');
+                    break;
+                }
+                const targetFolder = this.getFolderByPath(ts.cwd);
+                if (targetFolder && targetFolder.children && targetFolder.children[args[0]]) {
+                    delete targetFolder.children[args[0]];
+                    this.saveFilesystem();
+                    this.terminalPrint(windowId, '', 'output');
+                } else {
+                    this.terminalPrint(windowId, `rm: impossibile rimuovere "${args[0]}": Nessun tale file o directory`, 'error');
+                }
+                break;
+            }
+            case 'history':
+                ts.history.forEach((h, i) => this.terminalPrint(windowId, `  ${(i + 1).toString().padStart(4)}  ${h}`, 'output'));
+                break;
+
+            default:
+                this.terminalPrint(windowId, `bash: ${cmd}: comando non trovato`, 'error');
+        }
+    }
+
+    terminalUpdatePrompt(windowId) {
+        const ts = this.terminalState[windowId];
+        if (!ts) return;
+        const prompt = document.getElementById(`terminal-prompt-${windowId}`);
+        if (prompt) {
+            const displayPath = ts.cwd === '/' ? '~' : `~${ts.cwd}`;
+            prompt.innerHTML = `utente@webos:${displayPath}$&nbsp;`;
+        }
+    }
+
+    terminalTabComplete(windowId, currentInput) {
+        const ts = this.terminalState[windowId];
+        const input = document.getElementById(`terminal-input-${windowId}`);
+        if (!input || !ts) return;
+        const parts = currentInput.split(' ');
+        const lastPart = parts[parts.length - 1];
+        const isCommand = parts.length === 1;
+        const folder = this.getFolderByPath(ts.cwd);
+
+        let matches = [];
+        if (isCommand) {
+            const commands = ['help', 'ls', 'cd', 'pwd', 'mkdir', 'touch', 'cat', 'echo', 'clear', 'whoami', 'date', 'neofetch', 'rm', 'history'];
+            matches = commands.filter(c => c.startsWith(lastPart));
+        } else if (folder && folder.children) {
+            matches = Object.keys(folder.children).filter(name => name.startsWith(lastPart));
+        }
+        if (matches.length === 1) {
+            parts[parts.length - 1] = matches[0];
+            input.value = parts.join(' ');
+        } else if (matches.length > 1) {
+            this.terminalPrint(windowId, matches.join('  '), 'output');
+        }
+    }
+
+    terminalNeofetch(windowId) {
+        const lines = [
+            { type: 'ascii', text: '  ___      _   _                   ' },
+            { type: 'ascii', text: ' / _ \\    | | | |                  ' },
+            { type: 'ascii', text: '/ /_\\ \\   | |_| |_   _ _ __   __ _ ' },
+            { type: 'ascii', text: '|  _  |   | __| | | | | \'_ \\ / _` |' },
+            { type: 'ascii', text: '| | | |   | |_| | |_| | | | | (_| |' },
+            { type: 'ascii', text: '\\_| |_/    \\__|_|\\__,_|_| |_|\\__,_|' },
+            { type: 'blank' },
+        ];
+        lines.forEach(l => this.terminalPrint(windowId, l.text, l.type));
+        this.terminalPrint(windowId, '', 'blank');
+        const user = this.state.profile || 'utente';
+        const hostname = 'webos';
+        const os = 'WebOS Educativo v1.0';
+        const kernel = '5.15.0-webos';
+        const uptime = this.getUptime();
+        const shell = 'bash 5.1.16';
+        const resolution = `${window.innerWidth}x${window.innerHeight}`;
+        const de = 'WebOS Desktop';
+        const theme = 'Glassmorphism';
+        const icons = 'Noto Color';
+        const term = 'WebOS Terminal';
+        const cpu = `${(Math.random() * 2 + 1).toFixed(1)} GHz @ ${Math.floor(Math.random() * 4 + 2)} Core`;
+        const mem = `${Math.floor(Math.random() * 400 + 512)} MB / ${Math.floor(Math.random() * 500 + 2048)} MB`;
+
+        const infoLines = [
+            `${user}@${hostname}`,
+            `-`.repeat(20),
+            `OS: ${os}`,
+            `Host: ${hostname}`,
+            `Kernel: ${kernel}`,
+            `Uptime: ${uptime}`,
+            `Shell: ${shell}`,
+            `Resolution: ${resolution}`,
+            `DE: ${de}`,
+            `Theme: ${theme}`,
+            `Icons: ${icons}`,
+            `Terminal: ${term}`,
+            `CPU: ${cpu}`,
+            `Memory: ${mem}`,
+        ];
+        infoLines.forEach(l => this.terminalPrint(windowId, l, 'info'));
+        this.terminalPrint(windowId, '', 'blank');
+    }
+
+    getUptime() {
+        const now = Date.now();
+        const diff = now - this.bootTime;
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
+        if (hours > 0) return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+        if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+        return `${seconds}s`;
+    }
+
+    // ===== Task Manager App =====
+    getTaskManagerContent(windowId) {
+        return `
+            <div class="task-manager-wrapper" id="task-manager-${windowId}">
+                <div class="task-manager-toolbar">
+                    <span class="task-manager-title">📊 Task Manager</span>
+                    <div class="task-manager-stats">
+                        <span class="task-manager-stat" id="task-uptime-${windowId}">Uptime: calcolo...</span>
+                    </div>
+                    <button class="task-manager-refresh-btn" id="task-refresh-${windowId}" title="Aggiorna">🔄</button>
+                </div>
+                <div class="task-manager-table-wrapper">
+                    <table class="task-manager-table" id="task-table-${windowId}">
+                        <thead>
+                            <tr>
+                                <th>Icona</th>
+                                <th>Nome App</th>
+                                <th>ID Finestra</th>
+                                <th>Memoria</th>
+                                <th>CPU %</th>
+                                <th>Stato</th>
+                                <th>Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="task-tbody-${windowId}"></tbody>
+                    </table>
+                </div>
+                <div class="task-manager-summary" id="task-summary-${windowId}"></div>
+            </div>
+        `;
+    }
+
+    initTaskManager(windowId) {
+        if (!this.bootTime) this.bootTime = Date.now();
+        const refreshBtn = document.getElementById(`task-refresh-${windowId}`);
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.renderTaskManagerTable(windowId);
+                this.playSound('click');
+            });
+        }
+        this.renderTaskManagerTable(windowId);
+        this.taskManagerIntervals = this.taskManagerIntervals || {};
+        this.taskManagerIntervals[windowId] = setInterval(() => {
+            this.renderTaskManagerTable(windowId);
+        }, 2000);
+    }
+
+    renderTaskManagerTable(windowId) {
+        const tbody = document.getElementById(`task-tbody-${windowId}`);
+        const summaryEl = document.getElementById(`task-summary-${windowId}`);
+        const uptimeEl = document.getElementById(`task-uptime-${windowId}`);
+        if (!tbody) return;
+
+        if (uptimeEl) uptimeEl.textContent = `Uptime: ${this.getUptime()}`;
+
+        const appIcons = {
+            'file-manager': '📁', 'notepad': '📝', 'terminal': '💻', 'task-manager': '📊',
+            'browser': '🌐', 'tutor': '🤖', 'settings': '⚙️', 'guide': '📖',
+            'games': '🎮', 'calculator': '🧮',
+        };
+
+        let rows = '';
+        let totalMem = 0;
+        let totalCpu = 0;
+        const count = this.state.openWindows.length;
+
+        if (count === 0) {
+            rows = `<tr><td colspan="7" style="text-align:center;color:#a0aec0;padding:30px;">Nessuna app aperta</td></tr>`;
+        } else {
+            this.state.openWindows.forEach(w => {
+                const icon = appIcons[w.appId] || '📦';
+                const mem = Math.floor(Math.random() * 120 + 20);
+                const cpu = (Math.random() * 25 + Math.random() * 15).toFixed(1);
+                totalMem += mem;
+                totalCpu += parseFloat(cpu);
+                const status = w.minimized ? '⏸ In pausa' : '▶ Attivo';
+                rows += `
+                    <tr>
+                        <td><span style="font-size:20px;">${icon}</span></td>
+                        <td>${w.title}</td>
+                        <td><code>${w.id}</code></td>
+                        <td>${mem} MB</td>
+                        <td>
+                            <div class="task-cpu-cell">
+                                <div class="task-cpu-bar-bg">
+                                    <div class="task-cpu-bar" style="width:${Math.min(parseFloat(cpu) * 3, 100)}%"></div>
+                                </div>
+                                <span>${cpu}%</span>
+                            </div>
+                        </td>
+                        <td><span class="task-status ${w.minimized ? 'task-paused' : 'task-active'}">${status}</span></td>
+                        <td><button class="task-kill-btn" onclick="app.closeTaskWindow('${windowId}', '${w.id}')">✕ Termina</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        tbody.innerHTML = rows;
+
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <span>Processi: <strong>${count}</strong></span>
+                <span>Memoria totale: <strong>${totalMem} MB</strong></span>
+                <span>CPU medio: <strong>${count > 0 ? (totalCpu / count).toFixed(1) : 0}%</strong></span>
+            `;
+        }
+    }
+
+    closeTaskWindow(windowId, targetWindowId) {
+        if (targetWindowId === windowId) {
+            this.showTutorMessage('Non puoi chiudere il Task Manager da se stesso!');
+            return;
+        }
+        this.closeWindow(targetWindowId);
+        this.playSound('success');
+        this.showTutorMessage(`Processo terminato.`);
+        this.renderTaskManagerTable(windowId);
+    }
+
+    // ===== Clock Widget =====
+    initClockWidget() {
+        const widget = document.getElementById('clock-widget');
+        const timeEl = document.getElementById('clock-widget-time');
+        const dateEl = document.getElementById('clock-widget-date');
+        if (!widget || !timeEl || !dateEl) return;
+        widget.classList.remove('hidden');
+
+        const updateClock = () => {
+            const now = new Date();
+            timeEl.textContent = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            dateEl.textContent = now.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        };
+        updateClock();
+        this.clockWidgetInterval = setInterval(updateClock, 1000);
+    }
+
+    toggleCalendarWidget() {
+        const calendarEl = document.getElementById('clock-widget-calendar');
+        if (!calendarEl) return;
+        calendarEl.classList.toggle('hidden');
+        if (!calendarEl.classList.contains('hidden')) {
+            this.renderCalendar();
+        }
+    }
+
+    renderCalendar() {
+        const calendarEl = document.getElementById('clock-widget-calendar');
+        if (!calendarEl) return;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const today = now.getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+
+        let cells = '';
+        for (let i = 0; i < firstDay; i++) cells += '<div class="cal-cell cal-empty"></div>';
+        for (let d = 1; d <= daysInMonth; d++) {
+            const cls = d === today ? 'cal-cell cal-today' : 'cal-cell';
+            cells += `<div class="${cls}">${d}</div>`;
+        }
+        while (cells.split('cal-cell').length < 43 && cells.split('cal-cell').length + cells.split('cal-empty').length - 1 < 42) {
+            cells += '<div class="cal-cell cal-empty"></div>';
+        }
+
+        calendarEl.innerHTML = `
+            <div class="calendar-month">${monthNames[month]} ${year}</div>
+            <div class="calendar-weekdays">${dayNames.map(d => `<div class="cal-weekday">${d}</div>`).join('')}</div>
+            <div class="calendar-grid">${cells}</div>
+        `;
+    }
+
+    // ===== Notepad Improvements =====
+    getNotepadContent(windowId) {
+        return `
+            <div class="notepad-toolbar">
+                <div class="notepad-toolbar-group">
+                    <button class="notepad-btn" id="notepad-bold-${windowId}" onclick="app.notepadFormat('${windowId}', 'bold')" title="Grassetto"><b>B</b></button>
+                    <button class="notepad-btn" id="notepad-italic-${windowId}" onclick="app.notepadFormat('${windowId}', 'italic')" title="Corsivo"><i>I</i></button>
+                    <button class="notepad-btn" id="notepad-underline-${windowId}" onclick="app.notepadFormat('${windowId}', 'underline')" title="Sottolineato"><u>U</u></button>
+                </div>
+                <div class="notepad-toolbar-group">
+                    <button class="notepad-btn notepad-size-btn" onclick="app.notepadFontSize('${windowId}', -1)" title="Riduci">A-</button>
+                    <button class="notepad-btn notepad-size-btn" onclick="app.notepadFontSize('${windowId}', 1)" title="Ingrandisci">A+</button>
+                </div>
+                <span class="notepad-status" id="notepad-status-${windowId}">Pronto</span>
+            </div>
+            <div class="notepad-editor" id="notepad-editor-${windowId}" contenteditable="true" placeholder="Scrivi qui le tue note..."></div>
+            <div class="notepad-footer">
+                <span class="notepad-wordcount" id="notepad-wordcount-${windowId}">0 parole | 0 caratteri</span>
+            </div>
+        `;
+    }
+
+    initNotepad(windowId) {
+        const notes = localStorage.getItem('webos_notes');
+        const editor = document.getElementById(`notepad-editor-${windowId}`);
+        const statusEl = document.getElementById(`notepad-status-${windowId}`);
+        const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
+        if (!editor) return;
+        editor.textContent = notes || '';
+        editor.style.fontSize = localStorage.getItem('webos_notes_fontsize') || '14px';
+        this.updateNotepadWordCount(windowId);
+        let saveTimeout;
+        editor.addEventListener('input', () => {
+            if (statusEl) statusEl.textContent = 'Non salvato...';
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                localStorage.setItem('webos_notes', editor.textContent);
+                if (statusEl) statusEl.textContent = 'Salvato ✓';
+                this.playSound('success');
+            }, 800);
+            this.updateNotepadWordCount(windowId);
+        });
+    }
+
+    notepadFormat(windowId, command) {
+        const editor = document.getElementById(`notepad-editor-${windowId}`);
+        if (!editor) return;
+        editor.focus();
+        document.execCommand(command, false, null);
+    }
+
+    notepadFontSize(windowId, delta) {
+        const editor = document.getElementById(`notepad-editor-${windowId}`);
+        if (!editor) return;
+        const current = parseInt(localStorage.getItem('webos_notes_fontsize') || '14');
+        const newSize = Math.max(10, Math.min(28, current + delta * 2));
+        editor.style.fontSize = newSize + 'px';
+        localStorage.setItem('webos_notes_fontsize', newSize + 'px');
+    }
+
+    updateNotepadWordCount(windowId) {
+        const editor = document.getElementById(`notepad-editor-${windowId}`);
+        const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
+        if (!editor || !wordcountEl) return;
+        const text = editor.textContent || '';
+        const trimmed = text.trim();
+        const words = trimmed ? trimmed.split(/\s+/).length : 0;
+        const chars = text.length;
+        wordcountEl.textContent = `${words} parola${words !== 1 ? 'e' : ''} | ${chars} caratter${chars !== 1 ? 'i' : 'e'}`;
+    }
     initApp(appId, windowId) {
         switch (appId) {
             case 'file-manager':
@@ -1025,6 +1652,12 @@ class WebOSApp {
                 break;
             case 'notepad':
                 this.initNotepad(windowId);
+                break;
+            case 'terminal':
+                this.initTerminal(windowId);
+                break;
+            case 'task-manager':
+                this.initTaskManager(windowId);
                 break;
             case 'browser':
                 this.initBrowser(windowId);
@@ -1627,7 +2260,16 @@ class WebOSApp {
                 <div class="settings-option">
                     <span class="settings-label">Sfondo</span>
                     <div class="settings-control">
-                        ${Object.keys(this.wallpapers).map(w => `
+                        ${Object.keys(this.wallpapers).filter(w => !['aurora','ocean','matrix'].includes(w)).map(w => `
+                            <button class="settings-btn ${this.state.wallpaper === w ? 'active' : ''}"
+                                    onclick="app.setWallpaper('${w}')">${w.charAt(0).toUpperCase() + w.slice(1)}</button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="settings-option">
+                    <span class="settings-label">Sfondo animato</span>
+                    <div class="settings-control">
+                        ${['aurora', 'ocean', 'matrix'].map(w => `
                             <button class="settings-btn ${this.state.wallpaper === w ? 'active' : ''}"
                                     onclick="app.setWallpaper('${w}')">${w.charAt(0).toUpperCase() + w.slice(1)}</button>
                         `).join('')}
@@ -2193,6 +2835,8 @@ class WebOSApp {
             'games': 'Ecco i Giochi! Qui impari divertendoti. Scegli un gioco e buon divertimento!',
             'calculator': 'Ecco la Calcolatrice! Puoi fare addizioni, sottrazioni, moltiplicazioni, divisioni, percentuali, radici quadrate e cambiare il segno. Provaci!',
             'notepad': 'Ecco il Blocco Note! Scrivi appunti, annotazioni o quello che vuoi. Si salva automaticamente!',
+            'terminal': 'Benvenuto nel Terminale! Qui puoi usare la riga di comando come un vero hacker. Prova i comandi: ls, cd, mkdir, neofetch e molti altri! Digita "help" per la lista completa.',
+            'task-manager': 'Ecco il Task Manager! Qui puoi vedere tutte le app aperte, quanto usano di memoria e CPU, e anche chiudere quelle che non servono più. Si aggiorna automaticamente ogni 2 secondi!',
         };
         return messages[appId] || 'Benvenuto!';
     }

@@ -752,16 +752,25 @@ body {
     background: #edf2f7;
     border-radius: 8px;
     margin-bottom: 10px;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.notepad-toolbar-group {
+    display: flex;
+    gap: 4px;
 }
 
 .notepad-btn {
     background: white;
     border: 1px solid #e2e8f0;
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 13px;
     transition: all 0.2s ease;
+    min-width: 32px;
+    text-align: center;
 }
 
 .notepad-btn:hover {
@@ -770,12 +779,22 @@ body {
     border-color: #667eea;
 }
 
+.notepad-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.notepad-size-btn {
+    font-weight: 600;
+}
+
 .notepad-status {
     font-size: 12px;
     color: #a0aec0;
 }
 
-.notepad-textarea {
+.notepad-editor {
     width: 100%;
     flex: 1;
     min-height: 350px;
@@ -785,15 +804,22 @@ body {
     font-family: 'Courier New', monospace;
     font-size: 14px;
     line-height: 1.6;
-    resize: none;
     outline: none;
     background: white;
     color: #2d3748;
     transition: border-color 0.2s ease;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
-.notepad-textarea:focus {
+.notepad-editor:focus {
     border-color: #667eea;
+}
+
+.notepad-editor:empty::before {
+    content: attr(placeholder);
+    color: #a0aec0;
 }
 
 .notepad-footer {
@@ -805,6 +831,520 @@ body {
 .notepad-wordcount {
     font-size: 12px;
     color: #a0aec0;
+}
+
+/* ===== App: Terminal ===== */
+.terminal-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #0c0c0c;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.terminal-header-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.terminal-header-dot.red { background: #ff5f57; }
+.terminal-header-dot.yellow { background: #ffbd2e; }
+.terminal-header-dot.green { background: #28c840; }
+
+.terminal-header-title {
+    margin-left: 8px;
+    color: #a0aec0;
+    font-size: 12px;
+}
+
+.terminal-body {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    background: #0c0c0c;
+    cursor: text;
+    position: relative;
+}
+
+.terminal-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.15) 2px,
+        rgba(0, 0, 0, 0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+
+.terminal-output {
+    position: relative;
+    z-index: 2;
+}
+
+.terminal-line {
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    min-height: 1.4em;
+}
+
+.terminal-command {
+    color: #e2e8f0;
+}
+
+.terminal-output {
+    color: #c9d1d9;
+}
+
+.terminal-error {
+    color: #ff6b6b;
+}
+
+.terminal-welcome {
+    color: #56d364;
+    font-weight: bold;
+}
+
+.terminal-ascii {
+    color: #58a6ff;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+}
+
+.terminal-info {
+    color: #c9d1d9;
+}
+
+.terminal-input-line {
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    margin-top: 2px;
+}
+
+.terminal-prompt {
+    color: #56d364;
+    font-size: 13px;
+    white-space: nowrap;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #e2e8f0;
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    outline: none;
+    caret-color: #56d364;
+    padding: 0;
+    margin: 0;
+}
+
+.terminal-body.focused .terminal-input {
+    caret-color: #56d364;
+}
+
+/* ===== App: Task Manager ===== */
+.task-manager-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 12px;
+}
+
+.task-manager-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    background: #f7fafc;
+    border-radius: 8px;
+}
+
+.task-manager-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.task-manager-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #4a5568;
+    flex-wrap: wrap;
+}
+
+.task-manager-stat {
+    background: #edf2f7;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.task-manager-refresh-btn {
+    background: white;
+    border: 1px solid #e2e8f0;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.task-manager-refresh-btn:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.task-manager-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.task-manager-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.task-manager-table thead {
+    background: #edf2f7;
+    position: sticky;
+    top: 0;
+}
+
+.task-manager-table th {
+    padding: 10px 12px;
+    text-align: left;
+    color: #4a5568;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.task-manager-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #edf2f7;
+    vertical-align: middle;
+}
+
+.task-manager-table tbody tr:hover {
+    background: #f7fafc;
+}
+
+.task-cpu-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 100px;
+}
+
+.task-cpu-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.task-cpu-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78, #38a169);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.task-cpu-bar.high {
+    background: linear-gradient(90deg, #f6ad55, #ed8936);
+}
+
+.task-cpu-bar.critical {
+    background: linear-gradient(90deg, #fc8181, #f56565);
+}
+
+.task-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.task-active {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.task-paused {
+    background: #feebc8;
+    color: #744210;
+}
+
+.task-kill-btn {
+    background: white;
+    border: 1px solid #e53e3e;
+    color: #e53e3e;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.task-kill-btn:hover {
+    background: #e53e3e;
+    color: white;
+}
+
+.task-manager-summary {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: #1a202c;
+    color: white;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.task-manager-summary span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.task-manager-summary strong {
+    color: #63b3ed;
+}
+
+/* ===== Clock Widget ===== */
+.clock-widget {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 180px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 15px;
+    padding: 15px;
+    color: white;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: clockIn 0.5s ease;
+    z-index: 5;
+    cursor: pointer;
+    user-select: none;
+    text-align: center;
+}
+
+@keyframes clockIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.clock-widget-time {
+    font-size: 36px;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    line-height: 1.1;
+}
+
+.clock-widget-date {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 4px;
+    text-transform: capitalize;
+}
+
+.clock-widget-calendar {
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 10px;
+    color: #2d3748;
+    text-align: left;
+    animation: calIn 0.2s ease;
+}
+
+@keyframes calIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.calendar-month {
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.cal-weekday {
+    text-align: center;
+    font-size: 10px;
+    color: #a0aec0;
+    font-weight: 600;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.cal-cell {
+    text-align: center;
+    padding: 3px;
+    font-size: 11px;
+    border-radius: 4px;
+    color: #4a5568;
+}
+
+.cal-cell.cal-today {
+    background: #667eea;
+    color: white;
+    font-weight: 700;
+    border-radius: 50%;
+}
+
+.cal-cell.cal-empty {
+    color: transparent;
+}
+
+/* ===== Animated Wallpapers ===== */
+.wallpaper-aurora {
+    background: #000;
+    animation: auroraShift 8s ease-in-out infinite;
+}
+
+@keyframes auroraShift {
+    0%, 100% {
+        background:
+            radial-gradient(ellipse at 20% 50%, rgba(72, 199, 142, 0.6) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 20%, rgba(102, 126, 234, 0.5) 0%, transparent 50%),
+            radial-gradient(ellipse at 50% 80%, rgba(118, 75, 162, 0.4) 0%, transparent 50%),
+            linear-gradient(135deg, #0a0a1a 0%, #0f2027 50%, #203a43 100%);
+    }
+    33% {
+        background:
+            radial-gradient(ellipse at 70% 30%, rgba(72, 199, 142, 0.5) 0%, transparent 50%),
+            radial-gradient(ellipse at 30% 60%, rgba(102, 126, 234, 0.6) 0%, transparent 50%),
+            radial-gradient(ellipse at 60% 90%, rgba(118, 75, 162, 0.5) 0%, transparent 50%),
+            linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    }
+    66% {
+        background:
+            radial-gradient(ellipse at 40% 70%, rgba(72, 199, 142, 0.7) 0%, transparent 50%),
+            radial-gradient(ellipse at 90% 40%, rgba(102, 126, 234, 0.4) 0%, transparent 50%),
+            radial-gradient(ellipse at 20% 20%, rgba(118, 75, 162, 0.6) 0%, transparent 50%),
+            linear-gradient(135deg, #1a0a2e 0%, #0f2027 50%, #203a43 100%);
+    }
+}
+
+.wallpaper-ocean {
+    background: #001e3c;
+    animation: oceanWaves 6s ease-in-out infinite;
+}
+
+@keyframes oceanWaves {
+    0%, 100% {
+        background: linear-gradient(180deg, #001e3c 0%, #003566 30%, #006d77 50%, #0088a3 70%, #00b4d8 85%, #90e0ef 100%);
+    }
+    50% {
+        background: linear-gradient(180deg, #001e3c 0%, #002855 30%, #005f73 50%, #0088a3 70%, #00b4d8 85%, #caf0f8 100%);
+    }
+}
+
+.wallpaper-matrix {
+    background: #000;
+    animation: matrixPulse 3s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+.wallpaper-matrix::after {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 200%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 255, 65, 0.07) 2px,
+        rgba(0, 255, 65, 0.07) 4px
+    );
+    animation: matrixFall 4s linear infinite;
+    pointer-events: none;
+}
+
+.wallpaper-matrix::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 0;
+    width: 100%;
+    height: 150%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 8px,
+        rgba(0, 255, 65, 0.03) 8px,
+        rgba(0, 255, 65, 0.03) 16px
+    );
+    animation: matrixFall 7s linear infinite reverse;
+    pointer-events: none;
+}
+
+@keyframes matrixFall {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
 }
 
 /* ===== App: File Manager ===== */
@@ -1486,6 +2026,54 @@ body {
 
     .weather-widget-icon {
         font-size: 30px;
+    }
+
+    .clock-widget {
+        width: 140px;
+        padding: 10px;
+    }
+
+    .clock-widget-time {
+        font-size: 26px;
+    }
+
+    .clock-widget-date {
+        font-size: 10px;
+    }
+
+    .terminal-wrapper {
+        font-size: 11px;
+    }
+
+    .terminal-line {
+        font-size: 11px;
+    }
+
+    .terminal-input {
+        font-size: 11px;
+    }
+
+    .terminal-body {
+        padding: 8px;
+    }
+
+    .task-manager-table {
+        font-size: 11px;
+    }
+
+    .task-manager-table th,
+    .task-manager-table td {
+        padding: 6px 8px;
+    }
+
+    .task-cpu-cell {
+        min-width: 70px;
+        gap: 4px;
+    }
+
+    .task-kill-btn {
+        padding: 3px 6px;
+        font-size: 10px;
     }
 }
 
