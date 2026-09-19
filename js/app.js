@@ -6,16 +6,20 @@ class WebOSApp {
             userMode: localStorage.getItem('webos_mode') || 'adulto',
             iconSize: localStorage.getItem('webos_iconSize') || 'medium',
             wallpaper: localStorage.getItem('webos_wallpaper') || 'gradient',
+            soundsEnabled: localStorage.getItem('webos_sounds') !== 'false',
             openWindows: [],
             windowZIndex: 100,
             activeWindow: null,
             startMenuOpen: false,
             filesystem: null,
             tutorAI: null,
+            contextMenuOpen: false,
+            currentSnapWindow: null,
         };
 
         this.desktopApps = [
             { id: 'file-manager', name: 'File e cartelle', icon: '📁', description: 'Gestisci i tuoi file' },
+            { id: 'notepad', name: 'Blocco Note', icon: '📝', description: 'Scrivi appunti e note' },
             { id: 'browser', name: 'Internet', icon: '🌐', description: 'Esplora il web' },
             { id: 'tutor', name: 'Tutor AI', icon: '🤖', description: 'Il tuo assistente' },
             { id: 'settings', name: 'Impostazioni', icon: '⚙️', description: 'Personalizza' },
@@ -37,17 +41,10 @@ class WebOSApp {
     }
 
     init() {
-        // Initialize file system
         this.initFilesystem();
-
-        // Set up event listeners
         this.setupEventListeners();
-
-        // Update clock
         this.updateClock();
         setInterval(() => this.updateClock(), 1000);
-
-        // Check if returning user
         if (this.state.profile) {
             this.boot();
         } else {
@@ -100,16 +97,17 @@ class WebOSApp {
     }
 
     setupEventListeners() {
-        // Close start menu when clicking outside
         document.addEventListener('click', (e) => {
             const startMenu = document.getElementById('start-menu');
             const startBtn = document.getElementById('start-btn');
             if (this.state.startMenuOpen && !startMenu.contains(e.target) && !startBtn.contains(e.target)) {
                 this.toggleStartMenu(false);
             }
+            if (this.state.contextMenuOpen) {
+                this.hideContextMenu();
+            }
         });
 
-        // Click on desktop to deselect windows
         const desktop = document.getElementById('desktop');
         if (desktop) {
             desktop.addEventListener('click', (e) => {
@@ -119,14 +117,36 @@ class WebOSApp {
                     this.updateTaskbarApps();
                 }
             });
+
+            desktop.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showContextMenu(e.clientX, e.clientY);
+            });
         }
 
-        // Global keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.toggleStartMenu(false);
                 this.hideTutorBubble();
+                this.hideContextMenu();
             }
+            if (e.key === 'F10' && e.ctrlKey) {
+                e.preventDefault();
+                this.minimizeAllWindows();
+            }
+            if (document.getElementById(`calc-display-${this.state.activeWindow}`)) {
+                this.handleCalculatorKeyboard(e);
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (this.state.parallaxEnabled) {
+                this.handleParallax(e);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            this.handleSnapRelease();
         });
     }
 
@@ -135,14 +155,11 @@ class WebOSApp {
         const bootScreen = document.getElementById('boot-screen');
         const progressBar = document.getElementById('boot-progress-bar');
         const profileSelect = document.getElementById('profile-select');
-
-        // Simulate loading
         let progress = 0;
         const interval = setInterval(() => {
             progress += Math.random() * 30;
             if (progress > 100) progress = 100;
             progressBar.style.width = progress + '%';
-
             if (progress >= 100) {
                 clearInterval(interval);
                 setTimeout(() => {
@@ -157,10 +174,8 @@ class WebOSApp {
         this.state.userMode = profile;
         localStorage.setItem('webos_profile', profile);
         localStorage.setItem('webos_mode', profile);
-
         const bootScreen = document.getElementById('boot-screen');
         bootScreen.classList.add('fade-out');
-
         setTimeout(() => {
             bootScreen.classList.add('hidden');
             this.boot();
@@ -171,42 +186,41 @@ class WebOSApp {
         const desktop = document.getElementById('desktop');
         const taskbar = document.getElementById('taskbar');
         const startMenuUser = document.getElementById('start-menu-user');
-
-        // Show desktop elements
         desktop.classList.remove('hidden');
         taskbar.classList.remove('hidden');
-
-        // Set user name based on profile
         const names = {
             bambino: '👦 Bambino',
             adulto: '👤 Utente',
             anziano: '👴 Nonno'
         };
         startMenuUser.textContent = names[this.state.profile] || '👤 Utente';
-
-        // Load saved preferences
         this.applySettings();
-
-        // Create desktop icons
         this.createDesktopIcons();
-
-        // Show welcome message from tutor
+        this.initWeatherWidget();
+        this.initParallax();
         setTimeout(() => {
             this.showTutorMessage('Ciao! Benvenuto nel WebOS Educativo! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare un tour, oppure esplora pure le app!');
         }, 1000);
-
-        // Show voice button for elderly mode
         if (this.state.userMode === 'anziano') {
             document.getElementById('voice-btn').classList.remove('hidden');
         }
     }
 
+    initParallax() {
+        this.state.parallaxEnabled = true;
+    }
+
+    handleParallax(e) {
+        const desktop = document.getElementById('desktop');
+        if (!desktop) return;
+        const x = (e.clientX / window.innerWidth - 0.5) * 10;
+        const y = (e.clientY / window.innerHeight - 0.5) * 10;
+        desktop.style.backgroundPosition = `calc(50% + ${x}px) calc(50% + ${y}px)`;
+    }
+
     applySettings() {
-        // Apply wallpaper
         const desktop = document.getElementById('desktop');
         desktop.style.background = this.wallpapers[this.state.wallpaper] || this.wallpapers.gradient;
-
-        // Apply icon size
         const icons = document.querySelectorAll('.desktop-icon');
         icons.forEach(icon => {
             icon.classList.remove('size-large', 'size-small');
@@ -214,8 +228,6 @@ class WebOSApp {
                 icon.classList.add(`size-${this.state.iconSize}`);
             }
         });
-
-        // Apply mode-specific settings
         if (this.state.userMode === 'bambino') {
             document.body.style.fontSize = '16px';
         } else if (this.state.userMode === 'anziano') {
@@ -230,7 +242,6 @@ class WebOSApp {
     createDesktopIcons() {
         const container = document.getElementById('desktop-icons');
         container.innerHTML = '';
-
         this.desktopApps.forEach(app => {
             const icon = document.createElement('div');
             icon.className = `desktop-icon ${this.state.iconSize !== 'medium' ? `size-${this.state.iconSize}` : ''}`;
@@ -245,6 +256,370 @@ class WebOSApp {
             });
             container.appendChild(icon);
         });
+    }
+
+    // ===== Weather Widget =====
+    initWeatherWidget() {
+        const existing = document.getElementById('weather-widget');
+        if (existing) existing.remove();
+        const widget = document.createElement('div');
+        widget.id = 'weather-widget';
+        widget.className = 'weather-widget';
+        const cached = localStorage.getItem('webos_weather');
+        const weatherData = cached ? JSON.parse(cached) : this.generateWeatherData();
+        localStorage.setItem('webos_weather', JSON.stringify(weatherData));
+        widget.innerHTML = this.getWeatherWidgetHTML(weatherData);
+        const desktop = document.getElementById('desktop');
+        desktop.appendChild(widget);
+        const refreshBtn = document.getElementById('weather-refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const newData = this.generateWeatherData();
+                localStorage.setItem('webos_weather', JSON.stringify(newData));
+                widget.innerHTML = this.getWeatherWidgetHTML(newData);
+                this.playSound('success');
+            });
+        }
+    }
+
+    generateWeatherData() {
+        const conditions = [
+            { icon: '☀️', label: 'Soleggiato', tempRange: [22, 35] },
+            { icon: '⛅', label: 'Nuvoloso', tempRange: [18, 28] },
+            { icon: '🌧️', label: 'Pioggia', tempRange: [12, 22] },
+            { icon: '⛈️', label: 'Temporale', tempRange: [15, 25] },
+            { icon: '❄️', label: 'Neve', tempRange: [-5, 5] },
+        ];
+        const cities = [
+            { name: 'Roma', country: 'Italia' },
+            { name: 'Milano', country: 'Italia' },
+            { name: 'Napoli', country: 'Italia' },
+            { name: 'Torino', country: 'Italia' },
+            { name: 'Firenze', country: 'Italia' },
+        ];
+        const city = cities[Math.floor(Math.random() * cities.length)];
+        const condition = conditions[Math.floor(Math.random() * conditions.length)];
+        const temp = Math.floor(Math.random() * (condition.tempRange[1] - condition.tempRange[0])) + condition.tempRange[0];
+        const forecast = [];
+        const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+        const today = new Date().getDay();
+        for (let i = 1; i <= 4; i++) {
+            const dayCondition = conditions[Math.floor(Math.random() * conditions.length)];
+            forecast.push({
+                day: days[(today + i) % 7],
+                icon: dayCondition.icon,
+                tempHigh: Math.floor(Math.random() * (dayCondition.tempRange[1] - dayCondition.tempRange[0])) + dayCondition.tempRange[0],
+                tempLow: Math.floor(Math.random() * 5) + Math.floor(condition.tempRange[0] / 2),
+            });
+        }
+        return { city: city.name, country: city.country, condition: condition.label, icon: condition.icon, temp, humidity: Math.floor(Math.random() * 60) + 30, wind: Math.floor(Math.random() * 20) + 5, forecast };
+    }
+
+    getWeatherWidgetHTML(data) {
+        const forecastHTML = data.forecast.map(d => `
+            <div class="weather-forecast-day">
+                <span class="weather-forecast-day-name">${d.day}</span>
+                <span class="weather-forecast-icon">${d.icon}</span>
+                <span class="weather-forecast-temp">${d.tempHigh}°</span>
+            </div>
+        `).join('');
+        return `
+            <div class="weather-widget-header">
+                <span class="weather-widget-title">🌤️ Meteo</span>
+                <button class="weather-refresh-btn" id="weather-refresh-btn" title="Aggiorna">🔄</button>
+            </div>
+            <div class="weather-widget-main">
+                <span class="weather-widget-icon">${data.icon}</span>
+                <span class="weather-widget-temp">${data.temp}°C</span>
+                <span class="weather-widget-condition">${data.condition}</span>
+            </div>
+            <div class="weather-widget-location">📍 ${data.city}, ${data.country}</div>
+            <div class="weather-widget-details">
+                <span>💧 ${data.humidity}%</span>
+                <span>💨 ${data.wind} km/h</span>
+            </div>
+            <div class="weather-widget-forecast">
+                <div class="weather-forecast-row">
+                    ${forecastHTML}
+                </div>
+            </div>
+        `;
+    }
+
+    // ===== Context Menu =====
+    showContextMenu(x, y) {
+        this.hideContextMenu();
+        const menu = document.createElement('div');
+        menu.id = 'context-menu';
+        menu.className = 'context-menu';
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.innerHTML = `
+            <div class="context-menu-item" data-action="file-manager">📁 Apri File Manager</div>
+            <div class="context-menu-item" data-action="calculator">🧮 Apri Calcolatrice</div>
+            <div class="context-menu-item" data-action="wallpaper">🎨 Cambia sfondo</div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" data-action="properties">ℹ️ Proprietà</div>
+        `;
+        menu.querySelectorAll('.context-menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = item.dataset.action;
+                if (action === 'file-manager') this.openApp('file-manager');
+                else if (action === 'calculator') this.openApp('calculator');
+                else if (action === 'wallpaper') this.cycleWallpaper();
+                else if (action === 'properties') this.showProperties();
+                this.hideContextMenu();
+            });
+        });
+        document.body.appendChild(menu);
+        this.state.contextMenuOpen = true;
+        const menuRect = menu.getBoundingClientRect();
+        if (menuRect.right > window.innerWidth) menu.style.left = (window.innerWidth - menuRect.width - 5) + 'px';
+        if (menuRect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - menuRect.height - 5) + 'px';
+    }
+
+    hideContextMenu() {
+        const existing = document.getElementById('context-menu');
+        if (existing) existing.remove();
+        this.state.contextMenuOpen = false;
+    }
+
+    showProperties() {
+        const freeMem = Math.floor(Math.random() * 500 + 200);
+        const content = `
+            <div style="padding: 20px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">ℹ️ Proprietà del sistema</h3>
+                <div style="background: #f7fafc; padding: 15px; border-radius: 8px; line-height: 2;">
+                    <p><strong>Sistema:</strong> WebOS Educativo v1.0</p>
+                    <p><strong>Utente:</strong> ${this.state.profile || 'Non selezionato'}</p>
+                    <p><strong>Modalità:</strong> ${this.state.userMode}</p>
+                    <p><strong>Sfondo:</strong> ${this.state.wallpaper}</p>
+                    <p><strong>Icone:</strong> ${this.state.iconSize}</p>
+                    <p><strong>App aperte:</strong> ${this.state.openWindows.length}</p>
+                    <p><strong>Memoria libera:</strong> ${freeMem} MB</p>
+                </div>
+                <button class="file-manager-btn" style="margin-top: 15px;" onclick="this.closest('.window').querySelector('.window-control.close').click()">Chiudi</button>
+            </div>
+        `;
+        const propsWin = document.createElement('div');
+        propsWin.className = 'window active';
+        propsWin.id = 'window-props';
+        propsWin.style.cssText = 'left:50%;top:50%;transform:translate(-50%,-50%);width:350px;height:auto;z-index:9999;';
+        propsWin.innerHTML = `
+            <div class="window-titlebar" data-window-id="window-props">
+                <div class="window-title"><span>ℹ️</span><span>Proprietà</span></div>
+                <div class="window-controls">
+                    <button class="window-control close" onclick="app.closeWindow('window-props')" title="Chiudi">✕</button>
+                </div>
+            </div>
+            <div class="window-content">${content}</div>
+        `;
+        propsWin.addEventListener('mousedown', () => this.focusWindow('window-props'));
+        document.getElementById('window-container').appendChild(propsWin);
+    }
+
+    cycleWallpaper() {
+        const keys = Object.keys(this.wallpapers);
+        const currentIdx = keys.indexOf(this.state.wallpaper);
+        const nextIdx = (currentIdx + 1) % keys.length;
+        this.setWallpaper(keys[nextIdx]);
+    }
+
+    // ===== Window Snapping =====
+    handleWindowSnap(win, windowId) {
+        const rect = win.getBoundingClientRect();
+        const snapThreshold = 80;
+        const edgeThreshold = 20;
+        const windowData = this.state.openWindows.find(w => w.id === windowId);
+        if (!windowData) return;
+        if (windowData.maximized) return;
+        if (Math.abs(rect.left) < edgeThreshold && rect.width > 300) {
+            win.style.left = '0px';
+            win.style.top = '0px';
+            win.style.width = window.innerWidth / 2 + 'px';
+            win.style.height = (window.innerHeight - 48) + 'px';
+            win.style.borderRadius = '0px';
+            this.state.currentSnapWindow = windowId;
+            this.state.snapState = 'left';
+            this.playSound('success');
+            return;
+        }
+        if (Math.abs(rect.right - window.innerWidth) < edgeThreshold && rect.width > 300) {
+            win.style.left = (window.innerWidth / 2) + 'px';
+            win.style.top = '0px';
+            win.style.width = window.innerWidth / 2 + 'px';
+            win.style.height = (window.innerHeight - 48) + 'px';
+            win.style.borderRadius = '0px';
+            this.state.currentSnapWindow = windowId;
+            this.state.snapState = 'right';
+            this.playSound('success');
+            return;
+        }
+        if (rect.top < snapThreshold && !windowData.maximized) {
+            win.style.left = '0px';
+            win.style.top = '0px';
+            win.style.width = window.innerWidth + 'px';
+            win.style.height = (window.innerHeight - 48) + 'px';
+            win.style.borderRadius = '0px';
+            windowData.maximized = true;
+            windowData.prevX = windowData.x;
+            windowData.prevY = windowData.y;
+            windowData.prevWidth = windowData.width;
+            windowData.prevHeight = windowData.height;
+            win.classList.add('maximized');
+            this.state.currentSnapWindow = windowId;
+            this.state.snapState = 'maximized';
+            this.playSound('success');
+        }
+    }
+
+    handleSnapRelease() {
+        const win = document.getElementById(this.state.currentSnapWindow);
+        if (!win) return;
+        const windowData = this.state.openWindows.find(w => w.id === this.state.currentSnapWindow);
+        if (this.state.snapState === 'left' || this.state.snapState === 'right') {
+            if (windowData && windowData.maximized) {
+                win.classList.remove('maximized');
+                windowData.maximized = false;
+            }
+            win.style.left = windowData.prevX || '50px';
+            win.style.top = windowData.prevY || '50px';
+            win.style.width = windowData.prevWidth || '600px';
+            win.style.height = windowData.prevHeight || '450px';
+            win.style.borderRadius = '10px';
+            windowData.x = parseInt(windowData.prevX || '50');
+            windowData.y = parseInt(windowData.prevY || '50');
+            windowData.width = parseInt(windowData.prevWidth || '600');
+            windowData.height = parseInt(windowData.prevHeight || '450');
+        }
+        if (this.state.snapState === 'maximized' && windowData) {
+            win.style.left = windowData.prevX || '50px';
+            win.style.top = windowData.prevY || '50px';
+            win.style.width = windowData.prevWidth || '600px';
+            win.style.height = windowData.prevHeight || '450px';
+            win.style.borderRadius = '10px';
+            windowData.maximized = false;
+            win.classList.remove('maximized');
+            windowData.x = parseInt(windowData.prevX || '50');
+            windowData.y = parseInt(windowData.prevY || '50');
+            windowData.width = parseInt(windowData.prevWidth || '600');
+            windowData.height = parseInt(windowData.prevHeight || '450');
+        }
+        this.state.currentSnapWindow = null;
+        this.state.snapState = null;
+    }
+
+    minimizeAllWindows() {
+        this.state.openWindows.forEach(w => {
+            const win = document.getElementById(w.id);
+            if (win) {
+                win.classList.add('minimized');
+                w.minimized = true;
+            }
+        });
+        this.state.activeWindow = null;
+        this.updateTaskbarApps();
+    }
+
+    // ===== Sound Engine =====
+    initSoundEngine() {
+        this.audioContext = null;
+        this.state.soundsEnabled = localStorage.getItem('webos_sounds') !== 'false';
+    }
+
+    getAudioContext() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return this.audioContext;
+    }
+
+    playSound(type) {
+        if (!this.state.soundsEnabled) return;
+        try {
+            const ctx = this.getAudioContext();
+            const now = ctx.currentTime;
+            const sounds = {
+                click: () => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                },
+                open: () => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523, now);
+                    osc.frequency.setValueAtTime(659, now + 0.08);
+                    osc.frequency.setValueAtTime(784, now + 0.16);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                },
+                close: () => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(392, now);
+                    osc.frequency.exponentialRampToValueAtTime(196, now + 0.15);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                },
+                error: () => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.setValueAtTime(150, now + 0.1);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                },
+                success: () => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523, now);
+                    osc.frequency.setValueAtTime(659, now + 0.1);
+                    osc.frequency.setValueAtTime(784, now + 0.2);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0.15, now + 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                },
+            };
+            if (sounds[type]) sounds[type]();
+        } catch (e) {
+            // Audio not available
+        }
+    }
+
+    toggleSounds(enabled) {
+        this.state.soundsEnabled = enabled;
+        localStorage.setItem('webos_sounds', enabled);
+        if (enabled) this.playSound('success');
     }
 
     // ===== Taskbar & Start Menu =====
@@ -262,7 +637,6 @@ class WebOSApp {
         } else {
             this.state.startMenuOpen = !this.state.startMenuOpen;
         }
-
         if (this.state.startMenuOpen) {
             menu.classList.remove('hidden');
         } else {
@@ -273,11 +647,9 @@ class WebOSApp {
     // ===== Window Manager =====
     openApp(appId) {
         this.toggleStartMenu(false);
-
+        this.playSound('click');
         const appConfig = this.desktopApps.find(a => a.id === appId);
         if (!appConfig) return;
-
-        // Check if already open
         const existing = this.state.openWindows.find(w => w.appId === appId);
         if (existing) {
             if (existing.minimized) {
@@ -288,7 +660,6 @@ class WebOSApp {
             this.focusWindow(existing.id);
             return;
         }
-
         const windowId = `window-${Date.now()}`;
         const windowData = {
             id: windowId,
@@ -297,18 +668,20 @@ class WebOSApp {
             icon: appConfig.icon,
             x: 50 + (this.state.openWindows.length * 30),
             y: 50 + (this.state.openWindows.length * 30),
-            width: appId === 'tutor' ? 400 : 600,
-            height: appId === 'tutor' ? 500 : 450,
+            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : 600,
+            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : 450,
             minimized: false,
             maximized: false,
+            prevX: null,
+            prevY: null,
+            prevWidth: null,
+            prevHeight: null,
         };
-
         this.state.openWindows.push(windowData);
         this.renderWindow(windowData);
         this.updateTaskbarApps();
         this.focusWindow(windowId);
-
-        // Show contextual tutor message
+        this.playSound('open');
         this.showTutorMessage(this.getTutorWelcomeMessage(appId));
     }
 
@@ -322,7 +695,7 @@ class WebOSApp {
         win.style.width = windowData.width + 'px';
         win.style.height = windowData.height + 'px';
         win.style.zIndex = ++this.state.windowZIndex;
-
+        win.style.animation = 'windowOpen 0.2s ease';
         win.innerHTML = `
             <div class="window-titlebar" data-window-id="${windowData.id}">
                 <div class="window-title">
@@ -340,19 +713,10 @@ class WebOSApp {
             </div>
             <div class="window-resize-handle" data-window-id="${windowData.id}"></div>
         `;
-
-        // Click to focus
         win.addEventListener('mousedown', () => this.focusWindow(windowData.id));
-
-        // Make window draggable
         this.makeDraggable(win, windowData.id);
-
-        // Make window resizable
         this.makeResizable(win, windowData.id);
-
         container.appendChild(win);
-
-        // Initialize app-specific functionality
         this.initApp(windowData.appId, windowData.id);
     }
 
@@ -360,6 +724,8 @@ class WebOSApp {
         switch (appId) {
             case 'file-manager':
                 return this.getFileManagerContent(windowId);
+            case 'notepad':
+                return this.getNotepadContent(windowId);
             case 'browser':
                 return this.getBrowserContent(windowId);
             case 'tutor':
@@ -378,21 +744,18 @@ class WebOSApp {
     }
 
     focusWindow(windowId) {
-        // Remove active class from all windows
         document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
-
         const win = document.getElementById(windowId);
         if (win) {
             win.classList.add('active');
             win.style.zIndex = ++this.state.windowZIndex;
             this.state.activeWindow = windowId;
-
-            // Update taskbar
             this.updateTaskbarApps();
         }
     }
 
     minimizeWindow(windowId) {
+        this.playSound('close');
         const win = document.getElementById(windowId);
         if (win) {
             win.classList.add('minimized');
@@ -405,10 +768,8 @@ class WebOSApp {
     maximizeWindow(windowId) {
         const win = document.getElementById(windowId);
         if (!win) return;
-
         const windowData = this.state.openWindows.find(w => w.id === windowId);
         if (!windowData) return;
-
         windowData.maximized = !windowData.maximized;
         if (windowData.maximized) {
             win.classList.add('maximized');
@@ -416,44 +777,62 @@ class WebOSApp {
             windowData.prevY = win.style.top;
             windowData.prevWidth = win.style.width;
             windowData.prevHeight = win.style.height;
+            win.style.left = '0px';
+            win.style.top = '0px';
+            win.style.width = '100%';
+            win.style.height = '100%';
+            win.style.borderRadius = '0px';
         } else {
             win.classList.remove('maximized');
             win.style.left = windowData.prevX || '50px';
             win.style.top = windowData.prevY || '50px';
             win.style.width = windowData.prevWidth || '600px';
             win.style.height = windowData.prevHeight || '450px';
+            win.style.borderRadius = '10px';
         }
+        this.state.currentSnapWindow = null;
+        this.state.snapState = null;
     }
 
     closeWindow(windowId) {
+        this.playSound('close');
         const win = document.getElementById(windowId);
         if (win) {
-            win.remove();
-            this.state.openWindows = this.state.openWindows.filter(w => w.id !== windowId);
-            this.updateTaskbarApps();
+            win.style.animation = 'windowClose 0.15s ease forwards';
+            setTimeout(() => {
+                win.remove();
+                this.state.openWindows = this.state.openWindows.filter(w => w.id !== windowId);
+                this.updateTaskbarApps();
+            }, 150);
         }
     }
 
     updateTaskbarApps() {
         const container = document.getElementById('taskbar-apps');
         container.innerHTML = '';
-
         this.state.openWindows.forEach(w => {
             const btn = document.createElement('button');
             btn.className = `taskbar-app ${!w.minimized && this.state.activeWindow === w.id ? 'active' : ''}`;
             btn.innerHTML = `<span>${w.icon}</span><span>${w.title}</span>`;
-                    btn.addEventListener('click', () => {
-                        if (w.minimized) {
-                            w.minimized = false;
-                            const win = document.getElementById(w.id);
-                            if (win) win.classList.remove('minimized');
-                            this.focusWindow(w.id);
-                        } else if (this.state.activeWindow === w.id) {
-                            this.minimizeWindow(w.id);
-                        } else {
-                            this.focusWindow(w.id);
-                        }
-                    });
+            btn.addEventListener('click', () => {
+                this.playSound('click');
+                if (w.minimized) {
+                    w.minimized = false;
+                    const win = document.getElementById(w.id);
+                    if (win) win.classList.remove('minimized');
+                    this.focusWindow(w.id);
+                } else if (this.state.activeWindow === w.id) {
+                    this.minimizeWindow(w.id);
+                } else {
+                    this.focusWindow(w.id);
+                }
+            });
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (this.state.openWindows.length > 1) {
+                    this.minimizeAllWindows();
+                }
+            });
             container.appendChild(btn);
         });
     }
@@ -462,32 +841,36 @@ class WebOSApp {
         const titlebar = win.querySelector('.window-titlebar');
         let isDragging = false;
         let startX, startY, initialX, initialY;
+        let hasMoved = false;
 
         titlebar.addEventListener('mousedown', (e) => {
             if (e.target.closest('.window-control')) return;
-
             isDragging = true;
+            hasMoved = false;
             startX = e.clientX;
             startY = e.clientY;
             initialX = win.offsetLeft;
             initialY = win.offsetTop;
             win.style.cursor = 'grabbing';
+            win.style.transition = 'none';
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-
+            hasMoved = true;
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
             win.style.left = Math.max(0, initialX + dx) + 'px';
             win.style.top = Math.max(0, initialY + dy) + 'px';
+            this.handleWindowSnap(win, windowId);
         });
 
         document.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
                 win.style.cursor = '';
+                win.style.transition = '';
+                if (!hasMoved) this.handleWindowSnap(win, windowId);
             }
         });
     }
@@ -504,16 +887,26 @@ class WebOSApp {
             initialWidth = win.offsetWidth;
             initialHeight = win.offsetHeight;
             e.preventDefault();
+            const windowData = this.state.openWindows.find(w => w.id === windowId);
+            if (windowData && windowData.maximized) return;
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
             win.style.width = Math.max(300, initialWidth + dx) + 'px';
             win.style.height = Math.max(200, initialHeight + dy) + 'px';
+            const windowData = this.state.openWindows.find(w => w.id === windowId);
+            if (windowData) {
+                windowData.width = Math.max(300, initialWidth + dx);
+                windowData.height = Math.max(200, initialHeight + dy);
+                windowData.maximized = false;
+                win.classList.remove('maximized');
+                win.style.borderRadius = '10px';
+                this.state.currentSnapWindow = null;
+                this.state.snapState = null;
+            }
         });
 
         document.addEventListener('mouseup', () => {
@@ -521,11 +914,72 @@ class WebOSApp {
         });
     }
 
+    // ===== Notepad App =====
+    getNotepadContent(windowId) {
+        return `
+            <div class="notepad-toolbar">
+                <button class="notepad-btn" id="notepad-clear-${windowId}" onclick="app.clearNotepad('${windowId}')">🗑️ Svuota</button>
+                <span class="notepad-status" id="notepad-status-${windowId}">Pronto</span>
+            </div>
+            <textarea class="notepad-textarea" id="notepad-textarea-${windowId}" placeholder="Scrivi qui le tue note..."></textarea>
+            <div class="notepad-footer">
+                <span class="notepad-wordcount" id="notepad-wordcount-${windowId}">0 parole</span>
+            </div>
+        `;
+    }
+
+    initNotepad(windowId) {
+        const notes = localStorage.getItem('webos_notes');
+        const textarea = document.getElementById(`notepad-textarea-${windowId}`);
+        const statusEl = document.getElementById(`notepad-status-${windowId}`);
+        const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
+        if (!textarea) return;
+        textarea.value = notes || '';
+        if (wordcountEl) this.updateNotepadWordCount(windowId);
+        let saveTimeout;
+        textarea.addEventListener('input', () => {
+            if (statusEl) statusEl.textContent = 'Non salvato...';
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                localStorage.setItem('webos_notes', textarea.value);
+                if (statusEl) statusEl.textContent = 'Salvato ✓';
+                this.playSound('success');
+            }, 800);
+            if (wordcountEl) this.updateNotepadWordCount(windowId);
+        });
+    }
+
+    updateNotepadWordCount(windowId) {
+        const textarea = document.getElementById(`notepad-textarea-${windowId}`);
+        const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
+        if (!textarea || !wordcountEl) return;
+        const text = textarea.value.trim();
+        const words = text ? text.split(/\s+/).length : 0;
+        wordcountEl.textContent = `${words} parola${words !== 1 ? 'e' : ''}`;
+    }
+
+    clearNotepad(windowId) {
+        const textarea = document.getElementById(`notepad-textarea-${windowId}`);
+        const statusEl = document.getElementById(`notepad-status-${windowId}`);
+        const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
+        if (!textarea) return;
+        if (confirm('Sei sicuro di voler svuotare il blocco note?')) {
+            textarea.value = '';
+            localStorage.removeItem('webos_notes');
+            if (statusEl) statusEl.textContent = 'Pronto';
+            if (wordcountEl) wordcountEl.textContent = '0 parole';
+            this.playSound('success');
+        }
+    }
+
     // ===== App Implementations =====
     initApp(appId, windowId) {
         switch (appId) {
             case 'file-manager':
                 this.initFileManager(windowId);
+                break;
+            case 'notepad':
+                this.initNotepad(windowId);
                 break;
             case 'browser':
                 this.initBrowser(windowId);
@@ -555,7 +1009,7 @@ class WebOSApp {
                 <button class="file-manager-btn" id="up-btn-${windowId}" onclick="app.goUp('${windowId}')" style="display:none;">⬆️ Su</button>
                 <button class="file-manager-btn" onclick="app.createFolder('${windowId}')">📁 Nuova cartella</button>
                 <button class="file-manager-btn" onclick="app.createFile('${windowId}')">📄 Nuovo file</button>
-                <input type="text" class="file-manager-path" id="path-${windowId}" value="/" readonly>
+                <div class="file-breadcrumb" id="breadcrumb-${windowId}"></div>
             </div>
             <div class="file-list" id="filelist-${windowId}"></div>
         `;
@@ -567,30 +1021,26 @@ class WebOSApp {
 
     renderFileList(windowId, path) {
         const container = document.getElementById(`filelist-${windowId}`);
-        const pathInput = document.getElementById(`path-${windowId}`);
         const upBtn = document.getElementById(`up-btn-${windowId}`);
         if (!container) return;
-
-        pathInput.value = path;
-
-        // Show/hide up button
-        if (upBtn) {
-            upBtn.style.display = path === '/' ? 'none' : 'inline-block';
-        }
-
+        if (upBtn) upBtn.style.display = path === '/' ? 'none' : 'inline-block';
+        this.renderBreadcrumb(windowId, path);
         const folder = this.getFolderByPath(path);
         if (!folder || !folder.children) {
             container.innerHTML = '<p style="color:#a0aec0;">Cartella vuota</p>';
             return;
         }
-
         container.innerHTML = '';
         Object.entries(folder.children).forEach(([name, item]) => {
             const div = document.createElement('div');
             div.className = 'file-item';
+            const size = item.type === 'file' ? this.getFileSize(item.content) : null;
+            const ext = this.getFileExtension(name);
+            const icon = item.type === 'folder' ? '📁' : this.getFileTypeIcon(ext);
             div.innerHTML = `
-                <div class="file-icon">${item.type === 'folder' ? '📁' : '📄'}</div>
+                <div class="file-icon">${icon}</div>
                 <div class="file-name">${name}</div>
+                ${size ? `<div class="file-size">${size}</div>` : ''}
             `;
             div.addEventListener('click', () => {
                 if (item.type === 'folder') {
@@ -606,16 +1056,139 @@ class WebOSApp {
                     this.showFilePreview(windowId, path, name);
                 }
             });
+            div.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showFileContextMenu(e.clientX, e.clientY, windowId, path, name, item);
+            });
             container.appendChild(div);
         });
     }
 
+    showFileContextMenu(x, y, windowId, path, name, item) {
+        this.hideContextMenu();
+        const menu = document.createElement('div');
+        menu.id = 'context-menu';
+        menu.className = 'context-menu';
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        const menuItems = item.type === 'file'
+            ? `<div class="context-menu-item" data-action="rename">✏️ Rinomina</div>
+               <div class="context-menu-item" data-action="delete">🗑️ Elimina</div>
+               <div class="context-menu-separator"></div>
+               <div class="context-menu-item" data-action="info">ℹ️ Info</div>`
+            : `<div class="context-menu-item" data-action="rename">✏️ Rinomina</div>
+               <div class="context-menu-item" data-action="delete">🗑️ Elimina</div>`;
+        menu.innerHTML = menuItems;
+        menu.querySelectorAll('.context-menu-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = el.dataset.action;
+                if (action === 'rename') this.renameItem(windowId, path, name);
+                else if (action === 'delete') this.deleteItem(windowId, path, name);
+                else if (action === 'info') this.showFileInfo(windowId, path, name);
+                this.hideContextMenu();
+            });
+        });
+        document.body.appendChild(menu);
+        this.state.contextMenuOpen = true;
+        const menuRect = menu.getBoundingClientRect();
+        if (menuRect.right > window.innerWidth) menu.style.left = (window.innerWidth - menuRect.width - 5) + 'px';
+        if (menuRect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - menuRect.height - 5) + 'px';
+    }
+
+    renameItem(windowId, path, name) {
+        const folder = this.getFolderByPath(path);
+        if (!folder || !folder.children[name]) return;
+        const newName = prompt('Nuovo nome:', name);
+        if (!newName || newName === name) return;
+        if (folder.children[newName]) {
+            alert('Esiste già un file o cartella con questo nome!');
+            return;
+        }
+        folder.children[newName] = folder.children[name];
+        folder.children[newName].name = newName;
+        delete folder.children[name];
+        this.saveFilesystem();
+        this.renderFileList(windowId, path);
+        this.showTutorMessage(`Ho rinominato "${name}" in "${newName}"!`);
+    }
+
+    deleteItem(windowId, path, name) {
+        if (!confirm(`Sei sicuro di voler eliminare "${name}"?`)) return;
+        const folder = this.getFolderByPath(path);
+        if (folder && folder.children[name]) {
+            delete folder.children[name];
+            this.saveFilesystem();
+            this.renderFileList(windowId, path);
+            this.showTutorMessage(`Ho eliminato "${name}".`);
+        }
+    }
+
+    showFileInfo(windowId, path, name) {
+        const folder = this.getFolderByPath(path);
+        if (!folder || !folder.children[name]) return;
+        const item = folder.children[name];
+        const size = item.type === 'file' ? this.getFileSize(item.content) : '-';
+        const ext = this.getFileExtension(name);
+        const type = item.type === 'folder' ? 'Cartella' : this.getFileTypeName(ext);
+        const content = `
+            <div style="padding: 20px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">ℹ️ Informazioni</h3>
+                <div style="background: #f7fafc; padding: 15px; border-radius: 8px; line-height: 2;">
+                    <p><strong>Nome:</strong> ${name}</p>
+                    <p><strong>Tipo:</strong> ${type}</p>
+                    <p><strong>Dimensione:</strong> ${size}</p>
+                    <p><strong>Percorso:</strong> ${path === '/' ? '/' + name : path + '/' + name}</p>
+                </div>
+                <button class="file-manager-btn" style="margin-top: 15px;" onclick="app.renderFileList('${windowId}', '${path}')">← Chiudi</button>
+            </div>
+        `;
+        const container = document.getElementById(`filelist-${windowId}`);
+        if (container) container.innerHTML = content;
+    }
+
+    getFileSize(content) {
+        if (!content) return '0 B';
+        const bytes = new Blob([content]).size;
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    getFileExtension(filename) {
+        const parts = filename.split('.');
+        return parts.length > 1 ? parts.pop().toLowerCase() : '';
+    }
+
+    getFileTypeIcon(ext) {
+        const icons = { txt: '📝', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', mp3: '🎵', wav: '🎵', pdf: '📕', doc: '📘', docx: '📘', html: '🌐', js: '📜' };
+        return icons[ext] || '📄';
+    }
+
+    getFileTypeName(ext) {
+        const names = { txt: 'File di testo', jpg: 'Immagine JPEG', jpeg: 'Immagine JPEG', png: 'Immagine PNG', gif: 'Immagine GIF', mp3: 'File audio MP3', wav: 'File audio WAV', pdf: 'Documento PDF', doc: 'Documento Word', docx: 'Documento Word', html: 'Pagina HTML', js: 'File JavaScript' };
+        return names[ext] || 'File';
+    }
+
+    renderBreadcrumb(windowId, path) {
+        const breadcrumbEl = document.getElementById(`breadcrumb-${windowId}`);
+        if (!breadcrumbEl) return;
+        const parts = path.split('/').filter(p => p);
+        let html = `<span class="breadcrumb-item" onclick="app.renderFileList('${windowId}', '/')">🏠 Home</span>`;
+        let currentPath = '';
+        parts.forEach((part, i) => {
+            currentPath += '/' + part;
+            html += `<span class="breadcrumb-separator">/</span>`;
+            html += `<span class="breadcrumb-item" onclick="app.renderFileList('${windowId}', '${currentPath}')">${part}</span>`;
+        });
+        breadcrumbEl.innerHTML = html;
+    }
+
     getFolderByPath(path) {
         if (path === '/') return this.state.filesystem['/'];
-
         const parts = path.split('/').filter(p => p);
         let current = this.state.filesystem['/'];
-
         for (const part of parts) {
             if (current.children && current.children[part]) {
                 current = current.children[part];
@@ -629,11 +1202,9 @@ class WebOSApp {
     createFolder(windowId) {
         const name = prompt('Nome della cartella:');
         if (!name) return;
-
         const pathInput = document.getElementById(`path-${windowId}`);
-        const currentPath = pathInput.value;
+        const currentPath = pathInput ? pathInput.value : '/';
         const folder = this.getFolderByPath(currentPath);
-
         if (folder && folder.children) {
             if (folder.children[name]) {
                 alert('Esiste già un file o cartella con questo nome!');
@@ -649,11 +1220,9 @@ class WebOSApp {
     createFile(windowId) {
         const name = prompt('Nome del file:');
         if (!name) return;
-
         const pathInput = document.getElementById(`path-${windowId}`);
-        const currentPath = pathInput.value;
+        const currentPath = pathInput ? pathInput.value : '/';
         const folder = this.getFolderByPath(currentPath);
-
         if (folder && folder.children) {
             if (folder.children[name]) {
                 alert('Esiste già un file o cartella con questo nome!');
@@ -668,9 +1237,8 @@ class WebOSApp {
 
     goUp(windowId) {
         const pathInput = document.getElementById(`path-${windowId}`);
-        const currentPath = pathInput.value;
+        const currentPath = pathInput ? pathInput.value : '/';
         if (currentPath === '/') return;
-
         const parts = currentPath.split('/').filter(p => p);
         parts.pop();
         const parentPath = parts.length === 0 ? '/' : '/' + parts.join('/');
@@ -680,11 +1248,8 @@ class WebOSApp {
     showFilePreview(windowId, path, filename) {
         const folder = this.getFolderByPath(path);
         if (!folder || !folder.children[filename]) return;
-
         const file = folder.children[filename];
         const content = file.content || '(file vuoto)';
-
-        // Show in a simple way within the file list area
         const container = document.getElementById(`filelist-${windowId}`);
         container.innerHTML = `
             <div style="padding: 20px; background: white; border-radius: 8px;">
@@ -701,7 +1266,6 @@ class WebOSApp {
     editFile(windowId, path, filename) {
         const folder = this.getFolderByPath(path);
         if (!folder || !folder.children[filename]) return;
-
         const file = folder.children[filename];
         const newContent = prompt('Modifica il contenuto:', file.content || '');
         if (newContent !== null) {
@@ -737,12 +1301,20 @@ class WebOSApp {
                     <li>Scoprire cosa sono i siti web</li>
                     <li>Capire come funzionano i link</li>
                     <li>Navigare in sicurezza</li>
+                    <li>Imparare cos'è la posta elettronica</li>
+                    <li>Capire i virus e come proteggersi</li>
+                    <li>Scoprire cosa sono i video in streaming</li>
+                    <li>Imparare a scaricare in sicurezza</li>
                 </ul>
-                <p style="margin-top: 20px;">Scegli una pagina dalla barra degli indirizzi o clicca qui:</p>
+                <p style="margin-top: 20px;">Scegli una pagina:</p>
                 <p><a onclick="app.navigateBrowser('internet')">Cos'è Internet?</a></p>
                 <p><a onclick="app.navigateBrowser('siti')">Cosa sono i siti web?</a></p>
                 <p><a onclick="app.navigateBrowser('link')">Cosa sono i link?</a></p>
                 <p><a onclick="app.navigateBrowser('sicurezza')">Navigare in sicurezza</a></p>
+                <p><a onclick="app.navigateBrowser('email')">Cos'è la posta elettronica?</a></p>
+                <p><a onclick="app.navigateBrowser('virus')">Virus e sicurezza del computer</a></p>
+                <p><a onclick="app.navigateBrowser('video')">Video in streaming</a></p>
+                <p><a onclick="app.navigateBrowser('download')">Scaricare in sicurezza</a></p>
             `,
             internet: `
                 <h2>🌍 Cos'è Internet?</h2>
@@ -789,19 +1361,109 @@ class WebOSApp {
                 </ul>
                 <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
             `,
+            email: `
+                <h2>📧 Cos'è la posta elettronica?</h2>
+                <p>La <strong>posta elettronica</strong> (email) è come la posta tradizionale, ma digitale!</p>
+                <p>Invece di scrivere su carta e mettere in una busta, scrivi sul computer e invii con un click.</p>
+                <p><strong>Come funziona:</strong></p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>Ogni persona ha un <strong>indirizzo email</strong> unico, come: nome@esempio.it</li>
+                    <li>Puoi inviare <strong>messaggi</strong> e anche <strong>allegati</strong> (foto, documenti)</li>
+                    <li>I messaggi arrivano in pochi secondi, anche da paesi lontani!</li>
+                </ul>
+                <p><strong>Regole di sicurezza:</strong></p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>Non aprire email da persone che non conosci</li>
+                    <li>Non cliccare su link sospetti nelle email</li>
+                    <li>Non dare la tua password a nessuno</li>
+                </ul>
+                <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
+            `,
+            virus: `
+                <h2>🦠 Virus e sicurezza del computer</h2>
+                <p>Un <strong>virus informatico</strong> è come un germe per il computer: può fare danni se non ti proteggi!</p>
+                <p><strong>Cosa può fare un virus:</strong></p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>Rallentare il computer</li>
+                    <li>Mostrare messaggi strani</li>
+                    <li>Cancellare file importanti</li>
+                </ul>
+                <p><strong>Come proteggersi:</strong></p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>Non scaricare programmi da siti sconosciuti</li>
+                    <li>Non aprire allegati email da persone che non conosci</li>
+                    <li>Tieni il computer aggiornato</li>
+                    <li>Usa un programma antivirus se disponibile</li>
+                    <li>Chiedi a un adulto se vedi qualcosa di strano</li>
+                </ul>
+                <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
+            `,
+            video: `
+                <h2>🎬 Video in streaming</h2>
+                <p>Lo <strong>streaming</strong> è come guardare la televisione su Internet!</p>
+                <p>Invece di scaricare tutto il video prima di guardarlo, lo vedi mentre si carica. Funziona come:</p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li><strong>YouTube</strong> - dove puoi guardare miliardi di video</li>
+                    <li><strong>Netflix/Disney+</strong> - film e serie TV</li>
+                    <li><strong>Twitch</strong> - video dal vivo di persone che giocano</li>
+                </ul>
+                <p><strong>Cose importanti da sapere:</strong></p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>Per vedere video in streaming serve una buona connessione Internet</li>
+                    <li>Alcuni contenuti sono per adulti: chiedi a un adulto prima di guardare</li>
+                    <li>Non tutti i video sono veri: impara a riconoscere le bufale!</li>
+                </ul>
+                <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
+            `,
+            download: `
+                <h2>⬇️ Scaricare in sicurezza</h2>
+                <p><strong>Scaricare</strong> significa prendere un file da Internet e salvarlo sul tuo computer.</p>
+                <p><strong>Regole per scaricare in sicurezza:</strong></p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>Scarica solo da siti che conosci e di cui ti fidi</li>
+                    <li>Non scaricare programmi da siti sconosciuti</li>
+                    <li>Fai attenzione ai file .exe - sono programmi che possono contenere virus</li>
+                    <li>Controlla sempre che il file sia quello che ti aspetti</li>
+                    <li>Chiedi a un adulto prima di scaricare cose nuove</li>
+                </ul>
+                <p><strong>Tipi di file comuni:</strong></p>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li><strong>.jpg / .png</strong> - foto</li>
+                    <li><strong>.mp3</strong> - musica</li>
+                    <li><strong>.pdf</strong> - documenti</li>
+                    <li><strong>.exe</strong> - programmi (attenzione!)</li>
+                </ul>
+                <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
+            `,
         };
-
         return pages[page] || pages.home;
     }
 
+    getBrowserPages() {
+        return ['home', 'internet', 'siti', 'link', 'sicurezza', 'email', 'virus', 'video', 'download'];
+    }
+
     initBrowser(windowId) {
-        // Browser initialized
+        const urlInput = document.getElementById(`browser-url-${windowId}`);
+        if (urlInput) {
+            urlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const val = urlInput.value.replace('webos://', '').trim().toLowerCase();
+                    const pages = this.getBrowserPages();
+                    if (pages.includes(val)) {
+                        this.navigateBrowser(val);
+                    } else {
+                        urlInput.value = 'webos://home';
+                        this.navigateBrowser('home');
+                    }
+                }
+            });
+        }
     }
 
     navigateBrowser(page) {
         const activeWin = this.state.openWindows.find(w => w.appId === 'browser' && !w.minimized);
         if (!activeWin) return;
-
         const content = document.getElementById(`browser-content-${activeWin.id}`);
         const url = document.getElementById(`browser-url-${activeWin.id}`);
         if (content) {
@@ -851,27 +1513,19 @@ class WebOSApp {
     }
 
     initTutor(windowId) {
-        // Tutor initialized
     }
 
     sendTutorMessage(windowId) {
         const input = document.getElementById(`tutor-input-${windowId}`);
         const message = input.value.trim();
         if (!message) return;
-
         const messagesContainer = document.getElementById(`tutor-messages-${windowId}`);
         if (!messagesContainer) return;
-
-        // Add user message
         const userMsg = document.createElement('div');
         userMsg.className = 'tutor-message user';
         userMsg.textContent = message;
         messagesContainer.appendChild(userMsg);
-
-        // Get tutor response
         const response = this.tutorAI.getResponse(message, this.state.userMode);
-
-        // Add tutor response after a short delay
         setTimeout(() => {
             const tutorMsg = document.createElement('div');
             tutorMsg.className = 'tutor-message tutor';
@@ -879,7 +1533,6 @@ class WebOSApp {
             messagesContainer.appendChild(tutorMsg);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }, 500);
-
         input.value = '';
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -895,12 +1548,9 @@ class WebOSApp {
     showTutorMessage(message) {
         const bubble = document.getElementById('tutor-bubble');
         const content = document.getElementById('tutor-bubble-content');
-
         if (bubble && content) {
             content.textContent = message;
             bubble.classList.remove('hidden');
-
-            // Auto hide after 8 seconds
             clearTimeout(this.tutorTimeout);
             this.tutorTimeout = setTimeout(() => {
                 this.hideTutorBubble();
@@ -910,9 +1560,7 @@ class WebOSApp {
 
     hideTutorBubble() {
         const bubble = document.getElementById('tutor-bubble');
-        if (bubble) {
-            bubble.classList.add('hidden');
-        }
+        if (bubble) bubble.classList.add('hidden');
     }
 
     toggleVoice() {
@@ -976,6 +1624,17 @@ class WebOSApp {
             </div>
 
             <div class="settings-section">
+                <h3>🔊 Audio</h3>
+                <div class="settings-option">
+                    <span class="settings-label">Effetti sonori</span>
+                    <div class="settings-control">
+                        <button class="settings-btn ${this.state.soundsEnabled ? 'active' : ''}" onclick="app.toggleSounds(true)">Attivo</button>
+                        <button class="settings-btn ${!this.state.soundsEnabled ? 'active' : ''}" onclick="app.toggleSounds(false)">Disattivo</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
                 <h3>💾 Dati</h3>
                 <div class="settings-option">
                     <span class="settings-label">File salvati</span>
@@ -988,7 +1647,6 @@ class WebOSApp {
     }
 
     initSettings(windowId) {
-        // Settings initialized
     }
 
     setWallpaper(wallpaper) {
@@ -1052,22 +1710,15 @@ class WebOSApp {
         const textEl = document.getElementById(`guide-text-${windowId}`);
         const prevBtn = document.getElementById(`guide-prev-${windowId}`);
         const nextBtn = document.getElementById(`guide-next-${windowId}`);
-
         if (titleEl) titleEl.textContent = step.title;
         if (textEl) textEl.textContent = step.text;
         if (prevBtn) prevBtn.disabled = this.currentGuideStep === 0;
-        if (nextBtn) {
-            nextBtn.textContent = this.currentGuideStep === this.guideSteps.length - 1 ? 'Ricomincia' : 'Avanti →';
-        }
-
-        // Highlight target if any
+        if (nextBtn) nextBtn.textContent = this.currentGuideStep === this.guideSteps.length - 1 ? 'Ricomincia' : 'Avanti →';
         if (step.target) {
             const target = document.querySelector(step.target);
             if (target) {
                 target.style.boxShadow = '0 0 0 4px #667eea';
-                setTimeout(() => {
-                    target.style.boxShadow = '';
-                }, 2000);
+                setTimeout(() => { target.style.boxShadow = ''; }, 2000);
             }
         }
     }
@@ -1106,29 +1757,24 @@ class WebOSApp {
     }
 
     initGames(windowId) {
-        // Games initialized
     }
 
     startGame(windowId, gameType) {
         const area = document.getElementById(`game-area-${windowId}`);
         if (!area) return;
-
         if (gameType === 'dragdrop') {
             area.innerHTML = `
                 <h3 style="color: #667eea;">📁 Trascina i file nella cartella giusta!</h3>
                 <p style="color: #4a5568;">Trascina i file nella cartella corretta. Ogni file appartiene a una cartella specifica.</p>
                 <div class="drag-drop-game" id="drag-game-${windowId}">
                     <div class="drop-zone" data-folder="Immagini" ondrop="app.handleDrop(event, '${windowId}')" ondragover="app.handleDragOver(event)" ondragleave="app.handleDragLeave(event)">
-                        <span style="font-size: 40px;">📁</span>
-                        <span>Immagini</span>
+                        <span style="font-size: 40px;">📁</span><span>Immagini</span>
                     </div>
                     <div class="drop-zone" data-folder="Documenti" ondrop="app.handleDrop(event, '${windowId}')" ondragover="app.handleDragOver(event)" ondragleave="app.handleDragLeave(event)">
-                        <span style="font-size: 40px;">📁</span>
-                        <span>Documenti</span>
+                        <span style="font-size: 40px;">📁</span><span>Documenti</span>
                     </div>
                     <div class="drop-zone" data-folder="Musica" ondrop="app.handleDrop(event, '${windowId}')" ondragover="app.handleDragOver(event)" ondragleave="app.handleDragLeave(event)">
-                        <span style="font-size: 40px;">📁</span>
-                        <span>Musica</span>
+                        <span style="font-size: 40px;">📁</span><span>Musica</span>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 20px;">
@@ -1146,7 +1792,6 @@ class WebOSApp {
                 { icon: '🤖', answer: 'tutor', options: ['tutor', 'gioco', 'musica', 'foto'] },
                 { icon: '💾', answer: 'file', options: ['cartella', 'file', 'schermo', 'mouse'] },
             ];
-
             const q = questions[Math.floor(Math.random() * questions.length)];
             area.innerHTML = `
                 <h3 style="color: #667eea;">🔍 A cosa serve questa icona?</h3>
@@ -1181,12 +1826,9 @@ class WebOSApp {
         e.preventDefault();
         const dropZone = e.currentTarget;
         dropZone.classList.remove('drag-over');
-
         const correctFolder = e.dataTransfer.getData('text/plain');
         const targetFolder = dropZone.dataset.folder;
-
         const feedback = document.getElementById(`game-feedback-${windowId}`);
-
         if (correctFolder === targetFolder) {
             feedback.innerHTML = '<div class="game-feedback success">✅ Corretto! Bravo!</div>';
             this.showTutorMessage('Bravo! Hai messo il file nella cartella giusta!');
@@ -1225,30 +1867,42 @@ class WebOSApp {
     // ===== Calculator =====
     getCalculatorContent(windowId) {
         return `
-            <div class="calculator" id="calc-${windowId}">
-                <div class="calc-display" id="calc-display-${windowId}">0</div>
-                <div class="calc-buttons">
-                    <button class="calc-btn calc-clear" onclick="app.calcClear('${windowId}')">C</button>
-                    <button class="calc-btn calc-op" onclick="app.calcBackspace('${windowId}')">⌫</button>
-                    <button class="calc-btn calc-func" onclick="app.calcSqrt('${windowId}')">√</button>
-                    <button class="calc-btn calc-func" onclick="app.calcPercent('${windowId}')">%</button>
-                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '/')">÷</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '7')">7</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '8')">8</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '9')">9</button>
-                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '*')">×</button>
-                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '-')">-</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '4')">4</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '5')">5</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '6')">6</button>
-                    <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '+')">+</button>
-                    <button class="calc-btn calc-equal" onclick="app.calcEqual('${windowId}')">=</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '1')">1</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '2')">2</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '3')">3</button>
-                    <button class="calc-btn calc-func" onclick="app.calcSignToggle('${windowId}')">±</button>
-                    <button class="calc-btn calc-zero" onclick="app.calcInput('${windowId}', '0')">0</button>
-                    <button class="calc-btn" onclick="app.calcInput('${windowId}', '.')">.</button>
+            <div class="calculator-wrapper" id="calc-wrapper-${windowId}">
+                <div class="calc-history-panel" id="calc-history-${windowId}">
+                    <div class="calc-history-header">
+                        <span>📊 Cronologia</span>
+                        <button class="calc-history-clear" onclick="app.clearCalcHistory('${windowId}')">Cancella</button>
+                    </div>
+                    <div class="calc-history-list" id="calc-history-list-${windowId}">
+                        <p style="color: #a0aec0; font-size: 12px; text-align: center; padding: 10px;">Nessun calcolo</p>
+                    </div>
+                </div>
+                <div class="calculator" id="calc-${windowId}">
+                    <div class="calc-display-expression" id="calc-expr-${windowId}"></div>
+                    <div class="calc-display" id="calc-display-${windowId}">0</div>
+                    <div class="calc-buttons">
+                        <button class="calc-btn calc-clear" onclick="app.calcClear('${windowId}')">C</button>
+                        <button class="calc-btn calc-op" onclick="app.calcBackspace('${windowId}')">⌫</button>
+                        <button class="calc-btn calc-func" onclick="app.calcSqrt('${windowId}')">√</button>
+                        <button class="calc-btn calc-func" onclick="app.calcPercent('${windowId}')">%</button>
+                        <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '/')">÷</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '7')">7</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '8')">8</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '9')">9</button>
+                        <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '*')">×</button>
+                        <button class="calc-btn calc-func" onclick="app.calcSignToggle('${windowId}')">±</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '4')">4</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '5')">5</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '6')">6</button>
+                        <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '-')">-</button>
+                        <button class="calc-btn calc-op" onclick="app.calcOperation('${windowId}', '+')">+</button>
+                        <button class="calc-btn calc-equal" onclick="app.calcEqual('${windowId}')">=</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '1')">1</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '2')">2</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '3')">3</button>
+                        <button class="calc-btn calc-zero" onclick="app.calcInput('${windowId}', '0')">0</button>
+                        <button class="calc-btn" onclick="app.calcInput('${windowId}', '.')">.</button>
+                    </div>
                 </div>
             </div>
         `;
@@ -1260,17 +1914,34 @@ class WebOSApp {
             previous: null,
             operator: null,
             waitingForOperand: false,
+            expression: '',
+            lastOperand: null,
         };
-
         this.calculators = this.calculators || {};
         this.calculators[windowId] = calc;
+        this.calcHistory = this.calcHistory || {};
+        this.calcHistory[windowId] = [];
+        const win = document.getElementById(windowId);
+        if (win) win.style.width = '520px';
+    }
+
+    handleCalculatorKeyboard(e) {
+        if (e.key >= '0' && e.key <= '9') this.calcInput(this.state.activeWindow, e.key);
+        else if (e.key === '.') this.calcInput(this.state.activeWindow, '.');
+        else if (e.key === '+') this.calcOperation(this.state.activeWindow, '+');
+        else if (e.key === '-') this.calcOperation(this.state.activeWindow, '-');
+        else if (e.key === '*') this.calcOperation(this.state.activeWindow, '*');
+        else if (e.key === '/') { e.preventDefault(); this.calcOperation(this.state.activeWindow, '/'); }
+        else if (e.key === 'Enter') this.calcEqual(this.state.activeWindow);
+        else if (e.key === 'Escape') this.calcClear(this.state.activeWindow);
+        else if (e.key === 'Backspace') this.calcBackspace(this.state.activeWindow);
     }
 
     calcInput(windowId, value) {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
+        const exprDisplay = document.getElementById(`calc-expr-${windowId}`);
         if (!calc || !display) return;
-
         if (calc.waitingForOperand) {
             calc.current = value === '.' ? '0.' : value;
             calc.waitingForOperand = false;
@@ -1278,27 +1949,31 @@ class WebOSApp {
             if (value === '.' && calc.current.includes('.')) return;
             calc.current = calc.current === '0' && value !== '.' ? value : calc.current + value;
         }
-
         display.textContent = calc.current;
+        if (exprDisplay && calc.operator && calc.previous !== null) {
+            const opSymbol = { '+': '+', '-': '-', '*': '×', '/': '÷' }[calc.operator] || calc.operator;
+            exprDisplay.textContent = `${calc.previous} ${opSymbol} ${calc.current}`;
+        }
     }
 
     calcClear(windowId) {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
+        const exprDisplay = document.getElementById(`calc-expr-${windowId}`);
         if (!calc || !display) return;
-
         calc.current = '0';
         calc.previous = null;
         calc.operator = null;
         calc.waitingForOperand = false;
+        calc.expression = '';
         display.textContent = '0';
+        if (exprDisplay) exprDisplay.textContent = '';
     }
 
     calcBackspace(windowId) {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
         if (!calc || !display) return;
-
         if (calc.waitingForOperand) return;
         calc.current = calc.current.length > 1 ? calc.current.slice(0, -1) : '0';
         display.textContent = calc.current;
@@ -1307,10 +1982,9 @@ class WebOSApp {
     calcOperation(windowId, nextOperator) {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
+        const exprDisplay = document.getElementById(`calc-expr-${windowId}`);
         if (!calc || !display) return;
-
         const inputValue = parseFloat(calc.current);
-
         if (calc.previous === null) {
             calc.previous = inputValue;
         } else if (calc.operator) {
@@ -1320,51 +1994,76 @@ class WebOSApp {
                 case '+': result = currentValue + inputValue; break;
                 case '-': result = currentValue - inputValue; break;
                 case '*': result = currentValue * inputValue; break;
-                case '/': result = inputValue === 0 ? 'Errore' : currentValue / inputValue; break;
+                case '/': result = inputValue === 0 ? null : currentValue / inputValue; break;
                 default: result = inputValue;
             }
-            calc.current = typeof result === 'number' ? String(result) : result;
-            calc.previous = typeof result === 'number' ? result : null;
+            if (result === null) {
+                calc.current = 'Errore';
+                display.textContent = 'Errore';
+                calc.previous = null;
+                calc.operator = null;
+                calc.waitingForOperand = true;
+                if (exprDisplay) exprDisplay.textContent = 'Errore: divisione per 0';
+                this.playSound('error');
+                return;
+            }
+            calc.current = String(Math.round(result * 1000000) / 1000000);
+            calc.previous = result;
             display.textContent = calc.current;
         }
-
         calc.waitingForOperand = true;
         calc.operator = nextOperator;
+        calc.lastOperand = calc.current;
+        if (exprDisplay) {
+            const opSymbol = { '+': '+', '-': '-', '*': '×', '/': '÷' }[nextOperator] || nextOperator;
+            exprDisplay.textContent = `${calc.current} ${opSymbol}`;
+        }
     }
 
     calcEqual(windowId) {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
+        const exprDisplay = document.getElementById(`calc-expr-${windowId}`);
         if (!calc || !display) return;
-
         if (!calc.operator || calc.previous === null) return;
-
         const inputValue = parseFloat(calc.current);
         const currentValue = calc.previous || 0;
+        const opSymbol = { '+': '+', '-': '-', '*': '×', '/': '÷' }[calc.operator] || calc.operator;
+        const expression = `${currentValue} ${opSymbol} ${calc.current}`;
         let result;
         switch (calc.operator) {
             case '+': result = currentValue + inputValue; break;
             case '-': result = currentValue - inputValue; break;
             case '*': result = currentValue * inputValue; break;
-            case '/': result = inputValue === 0 ? 'Errore' : currentValue / inputValue; break;
+            case '/': result = inputValue === 0 ? null : currentValue / inputValue; break;
             default: result = inputValue;
         }
-
-        calc.current = typeof result === 'number' ? String(result) : result;
+        if (result === null) {
+            calc.current = 'Errore';
+            display.textContent = 'Errore';
+            if (exprDisplay) exprDisplay.textContent = 'Errore: divisione per 0';
+            calc.previous = null;
+            calc.operator = null;
+            calc.waitingForOperand = true;
+            this.playSound('error');
+            return;
+        }
+        const resultStr = String(Math.round(result * 1000000) / 1000000);
+        this.addToCalcHistory(windowId, expression, resultStr);
+        calc.current = resultStr;
         calc.previous = null;
         calc.operator = null;
         calc.waitingForOperand = true;
         display.textContent = calc.current;
+        if (exprDisplay) exprDisplay.textContent = `${expression} =`;
     }
 
     calcPercent(windowId) {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
         if (!calc || !display) return;
-
         const value = parseFloat(calc.current);
         if (isNaN(value)) return;
-
         calc.current = String(value / 100);
         display.textContent = calc.current;
     }
@@ -1372,16 +2071,17 @@ class WebOSApp {
     calcSqrt(windowId) {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
+        const exprDisplay = document.getElementById(`calc-expr-${windowId}`);
         if (!calc || !display) return;
-
         const value = parseFloat(calc.current);
         if (isNaN(value) || value < 0) {
             calc.current = 'Errore';
             display.textContent = 'Errore';
+            if (exprDisplay) exprDisplay.textContent = 'Numero negativo';
+            this.playSound('error');
             return;
         }
-
-        calc.current = String(Math.sqrt(value));
+        calc.current = String(Math.round(Math.sqrt(value) * 1000000) / 1000000);
         display.textContent = calc.current;
     }
 
@@ -1389,15 +2089,52 @@ class WebOSApp {
         const calc = this.calculators[windowId];
         const display = document.getElementById(`calc-display-${windowId}`);
         if (!calc || !display) return;
-
         if (calc.current === '0' || calc.current === 'Errore') return;
-
         if (calc.current.startsWith('-')) {
             calc.current = calc.current.slice(1);
         } else {
             calc.current = '-' + calc.current;
         }
         display.textContent = calc.current;
+    }
+
+    addToCalcHistory(windowId, expression, result) {
+        if (!this.calcHistory[windowId]) this.calcHistory[windowId] = [];
+        this.calcHistory[windowId].unshift({ expression, result, time: new Date() });
+        if (this.calcHistory[windowId].length > 50) this.calcHistory[windowId].pop();
+        this.renderCalcHistory(windowId);
+    }
+
+    renderCalcHistory(windowId) {
+        const listEl = document.getElementById(`calc-history-list-${windowId}`);
+        if (!listEl) return;
+        const history = this.calcHistory[windowId] || [];
+        if (history.length === 0) {
+            listEl.innerHTML = '<p style="color: #a0aec0; font-size: 12px; text-align: center; padding: 10px;">Nessun calcolo</p>';
+            return;
+        }
+        listEl.innerHTML = history.slice(0, 20).map((item, i) => `
+            <div class="calc-history-item" onclick="app.useCalcHistoryItem('${windowId}', '${item.result.replace(/'/g, "\\'")}')">
+                <div class="calc-history-expr">${item.expression} =</div>
+                <div class="calc-history-result">${item.result}</div>
+            </div>
+        `).join('');
+    }
+
+    useCalcHistoryItem(windowId, result) {
+        const calc = this.calculators[windowId];
+        const display = document.getElementById(`calc-display-${windowId}`);
+        if (!calc || !display) return;
+        calc.current = result;
+        calc.waitingForOperand = false;
+        display.textContent = calc.current;
+        this.playSound('click');
+    }
+
+    clearCalcHistory(windowId) {
+        if (!this.calcHistory[windowId]) return;
+        this.calcHistory[windowId] = [];
+        this.renderCalcHistory(windowId);
     }
 
     // ===== Tutor Helper Methods =====
@@ -1410,6 +2147,7 @@ class WebOSApp {
             'guide': 'Benvenuto nella Guida! Ti accompagnerò passo passo alla scoperta del computer. Iniziamo?',
             'games': 'Ecco i Giochi! Qui impari divertendoti. Scegli un gioco e buon divertimento!',
             'calculator': 'Ecco la Calcolatrice! Puoi fare addizioni, sottrazioni, moltiplicazioni, divisioni, percentuali, radici quadrate e cambiare il segno. Provaci!',
+            'notepad': 'Ecco il Blocco Note! Scrivi appunti, annotazioni o quello che vuoi. Si salva automaticamente!',
         };
         return messages[appId] || 'Benvenuto!';
     }
@@ -1419,8 +2157,6 @@ class WebOSApp {
         this.toggleStartMenu(false);
         const shutdownScreen = document.getElementById('shutdown-screen');
         shutdownScreen.classList.remove('hidden');
-
-        // Close all windows
         this.state.openWindows.forEach(w => {
             const win = document.getElementById(w.id);
             if (win) win.remove();
@@ -1432,7 +2168,6 @@ class WebOSApp {
     wakeUp() {
         const shutdownScreen = document.getElementById('shutdown-screen');
         shutdownScreen.classList.add('hidden');
-
         this.showTutorMessage('Bentornato! Sei di nuovo nel tuo computer virtuale.');
     }
 
@@ -1442,10 +2177,8 @@ class WebOSApp {
         this.state.userMode = profile;
         localStorage.setItem('webos_profile', profile);
         localStorage.setItem('webos_mode', profile);
-
         const bootScreen = document.getElementById('boot-screen');
         bootScreen.classList.add('fade-out');
-
         setTimeout(() => {
             bootScreen.classList.add('hidden');
             this.boot();
@@ -1459,34 +2192,24 @@ class WebOSApp {
         } else {
             this.state.startMenuOpen = !this.state.startMenuOpen;
         }
-
-        if (this.state.startMenuOpen) {
-            menu.classList.remove('hidden');
-        } else {
-            menu.classList.add('hidden');
-        }
+        if (this.state.startMenuOpen) menu.classList.remove('hidden');
+        else menu.classList.add('hidden');
     }
 
     showTutorMessage(message) {
         const bubble = document.getElementById('tutor-bubble');
         const content = document.getElementById('tutor-bubble-content');
-
         if (bubble && content) {
             content.textContent = message;
             bubble.classList.remove('hidden');
-
             clearTimeout(this.tutorTimeout);
-            this.tutorTimeout = setTimeout(() => {
-                this.hideTutorBubble();
-            }, 8000);
+            this.tutorTimeout = setTimeout(() => { this.hideTutorBubble(); }, 8000);
         }
     }
 
     hideTutorBubble() {
         const bubble = document.getElementById('tutor-bubble');
-        if (bubble) {
-            bubble.classList.add('hidden');
-        }
+        if (bubble) bubble.classList.add('hidden');
     }
 
     toggleVoice() {
