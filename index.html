@@ -3,16 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebOS Educativo</title>
+    <title>JeadOS</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Boot Screen -->
     <div id="boot-screen" class="boot-screen">
         <div class="boot-content">
-            <div class="boot-logo">💻</div>
-            <h1 class="boot-title">WebOS Educativo</h1>
-            <p class="boot-subtitle">Il tuo primo computer virtuale</p>
+            <div class="boot-logo">
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                    <rect x="4" y="12" width="72" height="48" rx="8" stroke="white" stroke-width="3" fill="none"/>
+                    <rect x="24" y="60" width="32" height="4" rx="2" fill="white"/>
+                    <rect x="12" y="64" width="56" height="4" rx="2" fill="white"/>
+                    <path d="M40 4 L40 12" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="40" cy="4" r="2" fill="white"/>
+                </svg>
+            </div>
+            <h1 class="boot-title">JeadOS</h1>
+            <p class="boot-subtitle">Il tuo desktop virtuale, bello e semplice</p>
             <div class="boot-progress">
                 <div class="boot-progress-bar" id="boot-progress-bar"></div>
             </div>
@@ -36,7 +43,6 @@
         </div>
     </div>
 
-    <!-- Desktop -->
     <div id="desktop" class="desktop hidden">
         <div id="desktop-icons" class="desktop-icons"></div>
         <div id="window-container" class="window-container"></div>
@@ -47,119 +53,313 @@
         </div>
     </div>
 
-    <!-- Taskbar -->
-    <div id="taskbar" class="taskbar hidden">
-        <button id="start-btn" class="start-btn" onclick="app.toggleStartMenu()">
-            <span class="start-icon">🪟</span>
-            <span class="start-text">Menu</span>
+    <div id="top-bar" class="top-bar hidden">
+        <button id="activities-btn" class="activities-btn" onclick="app.toggleActivities()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            <span>Attività</span>
         </button>
-        <div id="taskbar-apps" class="taskbar-apps"></div>
-        <div class="taskbar-right">
-            <button class="notification-bell" id="notification-bell" onclick="app.toggleNotificationCenter()" title="Notifiche">
-                🔔
+        <div id="top-bar-center" class="top-bar-center"></div>
+        <div class="top-bar-right">
+            <button class="top-bar-icon-btn" id="top-volume-btn" onclick="app.showToast('Volume', 'Controllo volume non disponibile in questa versione.', 'info', 2000)" title="Volume">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+            </button>
+            <button class="top-bar-icon-btn" id="top-notif-btn" onclick="app.toggleNotificationCenter()" title="Notifiche">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
                 <span class="notification-badge hidden" id="notification-badge">0</span>
             </button>
-            <button class="notification-bell" id="search-btn" onclick="app.openLauncher()" title="Cerca">
-                🔍
+            <button class="top-bar-icon-btn" id="top-settings-btn" onclick="app.openApp('settings')" title="Impostazioni">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
             </button>
-            <span id="taskbar-clock" class="taskbar-clock"></span>
+            <span id="top-bar-clock" class="top-bar-clock"></span>
+            <button id="top-bar-user" class="top-bar-user" onclick="app.openApp('settings')">
+                <span class="top-bar-user-avatar">👤</span>
+            </button>
         </div>
     </div>
 
-    <!-- Start Menu -->
+    <div id="dock" class="dock hidden">
+        <div class="dock-container">
+            <button class="dock-item" data-app="app-launcher" onclick="app.toggleStartMenu()" title="Applicazioni">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                <span class="dock-indicator" data-app="app-launcher"></span>
+            </button>
+            <button class="dock-item" data-app="file-manager" onclick="app.openApp('file-manager')" title="File e cartelle">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span class="dock-indicator" data-app="file-manager"></span>
+            </button>
+            <button class="dock-item" data-app="browser" onclick="app.openApp('browser')" title="Internet">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                <span class="dock-indicator" data-app="browser"></span>
+            </button>
+            <button class="dock-item" data-app="terminal" onclick="app.openApp('terminal')" title="Terminale">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                <span class="dock-indicator" data-app="terminal"></span>
+            </button>
+            <button class="dock-item" data-app="notepad" onclick="app.openApp('notepad')" title="Blocco Note">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <span class="dock-indicator" data-app="notepad"></span>
+            </button>
+        </div>
+    </div>
+
+    <div id="activities-overlay" class="activities-overlay hidden" onclick="if(event.target===this)app.toggleActivities()">
+        <div class="activities-panel">
+            <div class="activities-search-wrapper">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" class="activities-search-input" id="activities-search" placeholder="Cerca app, file, impostazioni..." oninput="app.handleActivitiesSearch(this.value)" onkeydown="app.handleActivitiesKeydown(event)">
+            </div>
+            <div class="activities-body">
+                <div class="activities-windows" id="activities-windows"></div>
+                <div class="activities-workspaces">
+                    <div class="workspace-label">Spazi di lavoro</div>
+                    <div class="workspace-list" id="workspace-list">
+                        <button class="workspace-item active" data-ws="1" onclick="app.switchWorkspace(1)">
+                            <span>1</span>
+                        </button>
+                        <button class="workspace-item" data-ws="2" onclick="app.switchWorkspace(2)">
+                            <span>2</span>
+                        </button>
+                        <button class="workspace-item" data-ws="3" onclick="app.switchWorkspace(3)">
+                            <span>3</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="start-menu" class="start-menu hidden">
         <div class="start-menu-header">
-            <span id="start-menu-user" class="start-menu-user">👤 Utente</span>
+            <span id="start-menu-user" class="start-menu-user">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:8px;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Utente
+            </span>
         </div>
         <div class="start-menu-items" id="start-menu-items">
             <button class="start-menu-item" onclick="app.openApp('file-manager')">
-                <span class="start-menu-icon">📁</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </span>
                 <span>File e cartelle</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('browser')">
-                <span class="start-menu-icon">🌐</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                </span>
                 <span>Internet</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('tutor')">
-                <span class="start-menu-icon">🤖</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3"/>
+                    </svg>
+                </span>
                 <span>Tutor AI</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('guide')">
-                <span class="start-menu-icon">📖</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                </span>
                 <span>Guida</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('settings')">
-                <span class="start-menu-icon">⚙️</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </span>
                 <span>Impostazioni</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('games')">
-                <span class="start-menu-icon">🎮</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="6" y1="12" x2="10" y2="12"/>
+                        <line x1="8" y1="10" x2="8" y2="14"/>
+                        <line x1="15" y1="13" x2="15.01" y2="13"/>
+                        <line x1="18" y1="11" x2="18.01" y2="11"/>
+                        <rect x="2" y="6" width="20" height="12" rx="2"/>
+                    </svg>
+                </span>
                 <span>Giochi</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('gallery')">
-                <span class="start-menu-icon">🖼️</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                </span>
                 <span>Galleria</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('music')">
-                <span class="start-menu-icon">🎵</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                </span>
                 <span>Musica</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('calculator')">
-                <span class="start-menu-icon">🧮</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="2" width="16" height="20" rx="2"/>
+                        <line x1="8" y1="6" x2="16" y2="6"/>
+                        <line x1="8" y1="10" x2="8" y2="10.01"/>
+                        <line x1="12" y1="10" x2="12" y2="10.01"/>
+                        <line x1="16" y1="10" x2="16" y2="10.01"/>
+                        <line x1="8" y1="14" x2="8" y2="14.01"/>
+                        <line x1="12" y1="14" x2="12" y2="14.01"/>
+                        <line x1="16" y1="14" x2="16" y2="14.01"/>
+                        <line x1="8" y1="18" x2="8" y2="18.01"/>
+                        <line x1="12" y1="18" x2="12" y2="18.01"/>
+                        <line x1="16" y1="18" x2="16" y2="18.01"/>
+                    </svg>
+                </span>
                 <span>Calcolatrice</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('notepad')">
-                <span class="start-menu-icon">📝</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                </span>
                 <span>Blocco Note</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('terminal')">
-                <span class="start-menu-icon">💻</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="4 17 10 11 4 5"/>
+                        <line x1="12" y1="19" x2="20" y2="19"/>
+                    </svg>
+                </span>
                 <span>Terminale</span>
             </button>
             <button class="start-menu-item" onclick="app.openApp('task-manager')">
-                <span class="start-menu-icon">📊</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                </span>
                 <span>Task Manager</span>
             </button>
             <div class="start-menu-separator"></div>
             <button class="start-menu-item start-menu-item-danger" onclick="app.shutdown()">
-                <span class="start-menu-icon">🔌</span>
+                <span class="start-menu-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                        <line x1="12" y1="2" x2="12" y2="12"/>
+                    </svg>
+                </span>
                 <span>Spegni</span>
             </button>
         </div>
     </div>
 
-    <!-- Shutdown Screen -->
     <div id="shutdown-screen" class="shutdown-screen hidden">
         <div class="shutdown-content">
-            <div class="shutdown-icon">💤</div>
+            <div class="shutdown-icon">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                    <line x1="12" y1="2" x2="12" y2="12"/>
+                </svg>
+            </div>
             <p class="shutdown-text">Arrivederci!</p>
             <button class="shutdown-btn" onclick="app.wakeUp()">Riaccendi</button>
         </div>
     </div>
 
-    <!-- Tutor Bubble (floating contextual help) -->
     <div id="tutor-bubble" class="tutor-bubble hidden">
         <div class="tutor-bubble-content" id="tutor-bubble-content"></div>
-        <button class="tutor-bubble-close" onclick="app.hideTutorBubble()">✕</button>
+        <button class="tutor-bubble-close" onclick="app.hideTutorBubble()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
     </div>
 
-    <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Notification Center -->
     <div id="notification-center" class="notification-center">
         <div class="notification-center-header">
-            <span class="notification-center-title">🔔 Notifiche</span>
+            <span class="notification-center-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+                Notifiche
+            </span>
             <button class="notification-center-clear" onclick="app.clearAllNotifications()">Cancella tutto</button>
         </div>
         <div class="notification-list" id="notification-list"></div>
     </div>
 
-    <!-- Global Launcher -->
     <div id="launcher-overlay" class="launcher-overlay" onclick="if(event.target===this)app.closeLauncher()">
         <div class="launcher-panel">
             <div class="launcher-input-wrapper">
-                <span class="launcher-icon">🔍</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#a0aec0;flex-shrink:0;">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
                 <input type="text" class="launcher-input" id="launcher-input" placeholder="Cerca app, file, impostazioni..."
                        oninput="app.handleLauncherInput(this.value)" onkeydown="app.handleLauncherKeydown(event)">
             </div>
@@ -173,9 +373,11 @@
         </div>
     </div>
 
-    <!-- Voice button -->
     <button id="voice-btn" class="voice-btn hidden" onclick="app.toggleVoice()" title="Ascolta">
-        🔊
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
     </button>
 
     <script src="js/ai/tutor.js"></script>

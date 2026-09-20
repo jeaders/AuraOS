@@ -22,7 +22,7 @@ class TutorAI {
                 'come si elimina un file': 'Per eliminare un file, selezionalo e premi il pulsante "Elimina" nel File Manager. Attenzione: poi sparisce!',
                 'come si rinomina': 'Per rinominare un file o una cartella, selezionalo e clicca "Rinomina". Scrivi il nuovo nome e premi Invio.',
                 'come si cambia lo sfondo': 'Per cambiare lo sfondo, apri Impostazioni e cerca la sezione "Aspetto" o "Sfondo". Scegli quello che ti piace!',
-                'come si cambia la lingua': 'Purtroppo al momento WebOS Educativo è solo in italiano. Ma stiamo lavorando per aggiungere altre lingue!',
+                'come si cambia la lingua': 'Purtroppo al momento JeadOS è solo in italiano. Ma stiamo lavorando per aggiungere altre lingue!',
                 'cosa sono le impostazioni': 'Le Impostazioni sono dove puoi cambiare le preferenze del computer: sfondo, dimensione delle icone, modalità...',
                 'cosa è la barra delle applicazioni': 'La barra in basso si chiama barra delle applicazioni. Lì vedi le app aperte, l\'orologio e il pulsante Menu.',
                 'cosa è il menu start': 'Il Menu (o Start) è il pulsante in basso a sinistra. Cliccandolo si aprono tutte le app disponibili!',

@@ -1,12 +1,12 @@
-// ===== WebOS Educativo - Main Application =====
-class WebOSApp {
+// ===== JeadOS - Main Application =====
+class JeadOSApp {
     constructor() {
         this.state = {
-            profile: localStorage.getItem('webos_profile') || null,
-            userMode: localStorage.getItem('webos_mode') || 'adulto',
-            iconSize: localStorage.getItem('webos_iconSize') || 'medium',
-            wallpaper: localStorage.getItem('webos_wallpaper') || 'gradient',
-            soundsEnabled: localStorage.getItem('webos_sounds') !== 'false',
+            profile: localStorage.getItem('jeados_profile') || localStorage.getItem('webos_profile') || null,
+            userMode: localStorage.getItem('jeados_mode') || localStorage.getItem('webos_mode') || 'adulto',
+            iconSize: localStorage.getItem('jeados_iconSize') || localStorage.getItem('webos_iconSize') || 'medium',
+            wallpaper: localStorage.getItem('jeados_wallpaper') || localStorage.getItem('webos_wallpaper') || 'gradient',
+            soundsEnabled: (localStorage.getItem('jeados_sounds') || localStorage.getItem('webos_sounds')) !== 'false',
             openWindows: [],
             windowZIndex: 100,
             activeWindow: null,
@@ -16,7 +16,7 @@ class WebOSApp {
             contextMenuOpen: false,
             currentSnapWindow: null,
             bootTime: Date.now(),
-            fmView: localStorage.getItem('webos_fm_view') || 'grid',
+            fmView: localStorage.getItem('jeados_fm_view') || localStorage.getItem('webos_fm_view') || 'grid',
             fmSort: { field: 'name', direction: 'asc' },
             clipboard: { type: null, items: [] },
             fmSelectedItems: [],
@@ -29,25 +29,40 @@ class WebOSApp {
             recentFiles: [],
             fmCurrentPath: {},
             notificationCenterOpen: false,
+            activitiesOpen: false,
+            currentWorkspace: 1,
+            workspaces: [
+                { id: 1, name: 'Spazio 1', windows: [] },
+                { id: 2, name: 'Spazio 2', windows: [] },
+                { id: 3, name: 'Spazio 3', windows: [] },
+            ],
+            appearance: {
+                theme: localStorage.getItem('jeados_theme') || localStorage.getItem('webos_theme') || 'auto',
+                dockPosition: localStorage.getItem('jeados_dock_position') || localStorage.getItem('webos_dock_position') || 'bottom',
+                dockSize: localStorage.getItem('jeados_dock_size') || localStorage.getItem('webos_dock_size') || 'medium',
+                topBarVisible: (localStorage.getItem('jeados_topbar_visible') || localStorage.getItem('webos_topbar_visible') || 'true') !== 'false',
+                animationsEnabled: (localStorage.getItem('jeados_animations') || localStorage.getItem('webos_animations') || 'true') !== 'false',
+                fontSize: localStorage.getItem('jeados_font_size') || localStorage.getItem('webos_font_size') || 'medium',
+            },
         };
 
         try {
-            const savedTrash = localStorage.getItem('webos_trash');
+            const savedTrash = localStorage.getItem('jeados_trash') || localStorage.getItem('webos_trash');
             if (savedTrash) this.state.trash = JSON.parse(savedTrash);
         } catch (e) { this.state.trash = []; }
 
         try {
-            const savedNotifs = localStorage.getItem('webos_notifications');
+            const savedNotifs = localStorage.getItem('jeados_notifications') || localStorage.getItem('webos_notifications');
             if (savedNotifs) this.state.notifications = JSON.parse(savedNotifs);
         } catch (e) { this.state.notifications = []; }
 
         try {
-            const savedRecentApps = localStorage.getItem('webos_recent_apps');
+            const savedRecentApps = localStorage.getItem('jeados_recent_apps') || localStorage.getItem('webos_recent_apps');
             if (savedRecentApps) this.state.recentApps = JSON.parse(savedRecentApps);
         } catch (e) { this.state.recentApps = []; }
 
         try {
-            const savedRecentFiles = localStorage.getItem('webos_recent_files');
+            const savedRecentFiles = localStorage.getItem('jeados_recent_files') || localStorage.getItem('webos_recent_files');
             if (savedRecentFiles) this.state.recentFiles = JSON.parse(savedRecentFiles);
         } catch (e) { this.state.recentFiles = []; }
 
@@ -96,7 +111,7 @@ class WebOSApp {
     }
 
     initFilesystem() {
-        const saved = localStorage.getItem('webos_filesystem');
+        const saved = localStorage.getItem('jeados_filesystem') || localStorage.getItem('webos_filesystem');
         if (saved) {
             try {
                 this.state.filesystem = JSON.parse(saved);
@@ -173,7 +188,7 @@ class WebOSApp {
 
     saveFilesystem() {
         try {
-            localStorage.setItem('webos_filesystem', JSON.stringify(this.state.filesystem));
+            localStorage.setItem('jeados_filesystem', JSON.stringify(this.state.filesystem));
         } catch (e) {
             // Ignore storage errors
         }
@@ -202,7 +217,8 @@ class WebOSApp {
                 if (e.target === desktop || e.target.classList.contains('desktop-icons')) {
                     this.state.activeWindow = null;
                     document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
-                    this.updateTaskbarApps();
+                    this.updateDock();
+                    this.updateTopBar();
                 }
             });
 
@@ -287,8 +303,8 @@ class WebOSApp {
     selectProfile(profile) {
         this.state.profile = profile;
         this.state.userMode = profile;
-        localStorage.setItem('webos_profile', profile);
-        localStorage.setItem('webos_mode', profile);
+        localStorage.setItem('jeados_profile', profile);
+        localStorage.setItem('jeados_mode', profile);
         const bootScreen = document.getElementById('boot-screen');
         bootScreen.classList.add('fade-out');
         setTimeout(() => {
@@ -304,10 +320,12 @@ class WebOSApp {
             bootScreen.classList.add('hidden');
         }
         const desktop = document.getElementById('desktop');
-        const taskbar = document.getElementById('taskbar');
+        const topBar = document.getElementById('top-bar');
+        const dock = document.getElementById('dock');
         const startMenuUser = document.getElementById('start-menu-user');
         desktop.classList.remove('hidden');
-        taskbar.classList.remove('hidden');
+        if (topBar) topBar.classList.remove('hidden');
+        if (dock) dock.classList.remove('hidden');
         const names = {
             bambino: '👦 Bambino',
             adulto: '👤 Utente',
@@ -315,15 +333,19 @@ class WebOSApp {
         };
         startMenuUser.textContent = names[this.state.profile] || '👤 Utente';
         this.applySettings();
+        this.updateTopBar();
+        this.updateDock();
+        this.updateNotificationBadge();
         this.createDesktopIcons();
         this.initWeatherWidget();
         this.initParallax();
         this.initClockWidget();
         setTimeout(() => {
-            this.showTutorMessage('Ciao! Benvenuto nel WebOS Educativo! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare un tour, oppure esplora pure le app!');
+            this.showTutorMessage('Ciao! Benvenuto in JeadOS! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare un tour, oppure esplora pure le app!');
         }, 1000);
         if (this.state.userMode === 'anziano') {
-            document.getElementById('voice-btn').classList.remove('hidden');
+            const voiceBtn = document.getElementById('voice-btn');
+            if (voiceBtn) voiceBtn.classList.remove('hidden');
         }
     }
 
@@ -395,14 +417,14 @@ class WebOSApp {
         const widget = document.createElement('div');
         widget.id = 'weather-widget';
         widget.className = 'weather-widget';
-        const cached = localStorage.getItem('webos_weather');
+        const cached = localStorage.getItem('jeados_weather') || localStorage.getItem('webos_weather');
         let weatherData;
         try {
             weatherData = cached ? JSON.parse(cached) : this.generateWeatherData();
         } catch (e) {
             weatherData = this.generateWeatherData();
         }
-        localStorage.setItem('webos_weather', JSON.stringify(weatherData));
+        localStorage.setItem('jeados_weather', JSON.stringify(weatherData));
         widget.innerHTML = this.getWeatherWidgetHTML(weatherData);
         const desktop = document.getElementById('desktop');
         desktop.appendChild(widget);
@@ -411,7 +433,7 @@ class WebOSApp {
             refreshBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const newData = this.generateWeatherData();
-                localStorage.setItem('webos_weather', JSON.stringify(newData));
+                localStorage.setItem('jeados_weather', JSON.stringify(newData));
                 widget.innerHTML = this.getWeatherWidgetHTML(newData);
                 this.playSound('success');
             });
@@ -527,7 +549,7 @@ class WebOSApp {
             <div style="padding: 20px;">
                 <h3 style="color: #667eea; margin-bottom: 15px;">ℹ️ Proprietà del sistema</h3>
                 <div style="background: #f7fafc; padding: 15px; border-radius: 8px; line-height: 2;">
-                    <p><strong>Sistema:</strong> WebOS Educativo v1.0</p>
+                    <p><strong>Sistema:</strong> JeadOS v1.0</p>
                     <p><strong>Utente:</strong> ${this.state.profile || 'Non selezionato'}</p>
                     <p><strong>Modalità:</strong> ${this.state.userMode}</p>
                     <p><strong>Sfondo:</strong> ${this.state.wallpaper}</p>
@@ -572,9 +594,9 @@ class WebOSApp {
         if (windowData.maximized) return;
         if (Math.abs(rect.left) < edgeThreshold && rect.width > 300) {
             win.style.left = '0px';
-            win.style.top = '0px';
+            win.style.top = '32px';
             win.style.width = window.innerWidth / 2 + 'px';
-            win.style.height = (window.innerHeight - 48) + 'px';
+            win.style.height = (window.innerHeight - 32) + 'px';
             win.style.borderRadius = '0px';
             this.state.currentSnapWindow = windowId;
             this.state.snapState = 'left';
@@ -583,9 +605,9 @@ class WebOSApp {
         }
         if (Math.abs(rect.right - window.innerWidth) < edgeThreshold && rect.width > 300) {
             win.style.left = (window.innerWidth / 2) + 'px';
-            win.style.top = '0px';
+            win.style.top = '32px';
             win.style.width = window.innerWidth / 2 + 'px';
-            win.style.height = (window.innerHeight - 48) + 'px';
+            win.style.height = (window.innerHeight - 32) + 'px';
             win.style.borderRadius = '0px';
             this.state.currentSnapWindow = windowId;
             this.state.snapState = 'right';
@@ -594,9 +616,9 @@ class WebOSApp {
         }
         if (rect.top < snapThreshold && !windowData.maximized) {
             win.style.left = '0px';
-            win.style.top = '0px';
+            win.style.top = '32px';
             win.style.width = window.innerWidth + 'px';
-            win.style.height = (window.innerHeight - 48) + 'px';
+            win.style.height = (window.innerHeight - 32) + 'px';
             win.style.borderRadius = '0px';
             windowData.maximized = true;
             windowData.prevX = windowData.x;
@@ -655,13 +677,14 @@ class WebOSApp {
             }
         });
         this.state.activeWindow = null;
-        this.updateTaskbarApps();
+        this.updateDock();
+        this.updateTopBar();
     }
 
     // ===== Sound Engine =====
     initSoundEngine() {
         this.audioContext = null;
-        this.state.soundsEnabled = localStorage.getItem('webos_sounds') !== 'false';
+        this.state.soundsEnabled = (localStorage.getItem('jeados_sounds') || localStorage.getItem('webos_sounds')) !== 'false';
     }
 
     getAudioContext() {
@@ -757,17 +780,17 @@ class WebOSApp {
 
     toggleSounds(enabled) {
         this.state.soundsEnabled = enabled;
-        localStorage.setItem('webos_sounds', enabled);
+        localStorage.setItem('jeados_sounds', enabled);
         this.showToast('Audio', enabled ? 'Effetti sonori attivati.' : 'Effetti sonori disattivati.', 'info', 2000);
         if (enabled) this.playSound('success');
     }
 
     // ===== Taskbar & Start Menu =====
     updateClock() {
-        const clock = document.getElementById('taskbar-clock');
+        const clock = document.getElementById('top-bar-clock');
         const now = new Date();
         const options = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
-        clock.textContent = now.toLocaleDateString('it-IT', options);
+        if (clock) clock.textContent = now.toLocaleDateString('it-IT', options);
     }
 
     toggleStartMenu(forceState = null) {
@@ -821,7 +844,8 @@ class WebOSApp {
         };
         this.state.openWindows.push(windowData);
         this.renderWindow(windowData);
-        this.updateTaskbarApps();
+        this.updateDock();
+        this.updateTopBar();
         this.focusWindow(windowId);
         this.playSound('open');
         this.showTutorMessage(this.getTutorWelcomeMessage(appId));
@@ -900,7 +924,8 @@ class WebOSApp {
             win.classList.add('active');
             win.style.zIndex = ++this.state.windowZIndex;
             this.state.activeWindow = windowId;
-            this.updateTaskbarApps();
+            this.updateDock();
+            this.updateTopBar();
         }
     }
 
@@ -911,7 +936,9 @@ class WebOSApp {
             win.classList.add('minimized');
             const windowData = this.state.openWindows.find(w => w.id === windowId);
             if (windowData) windowData.minimized = true;
-            this.updateTaskbarApps();
+            this.state.activeWindow = null;
+            this.updateDock();
+            this.updateTopBar();
         }
     }
 
@@ -928,9 +955,9 @@ class WebOSApp {
             windowData.prevWidth = win.style.width;
             windowData.prevHeight = win.style.height;
             win.style.left = '0px';
-            win.style.top = '0px';
+            win.style.top = '32px';
             win.style.width = '100%';
-            win.style.height = '100%';
+            win.style.height = `calc(100% - 32px)`;
             win.style.borderRadius = '0px';
         } else {
             win.classList.remove('maximized');
@@ -952,7 +979,8 @@ class WebOSApp {
             setTimeout(() => {
                 win.remove();
                 this.state.openWindows = this.state.openWindows.filter(w => w.id !== windowId);
-                this.updateTaskbarApps();
+                this.updateDock();
+                this.updateTopBar();
             }, 150);
         }
         const winData = this.state.openWindows.find(w => w.id === windowId);
@@ -969,33 +997,17 @@ class WebOSApp {
         }
     }
 
-    updateTaskbarApps() {
-        const container = document.getElementById('taskbar-apps');
-        container.innerHTML = '';
-        this.state.openWindows.forEach(w => {
-            const btn = document.createElement('button');
-            btn.className = `taskbar-app ${!w.minimized && this.state.activeWindow === w.id ? 'active' : ''}`;
-            btn.innerHTML = `<span>${w.icon}</span><span>${w.title}</span>`;
-            btn.addEventListener('click', () => {
-                this.playSound('click');
-                if (w.minimized) {
-                    w.minimized = false;
-                    const win = document.getElementById(w.id);
-                    if (win) win.classList.remove('minimized');
-                    this.focusWindow(w.id);
-                } else if (this.state.activeWindow === w.id) {
-                    this.minimizeWindow(w.id);
-                } else {
-                    this.focusWindow(w.id);
-                }
-            });
-            btn.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                if (this.state.openWindows.length > 1) {
-                    this.minimizeAllWindows();
-                }
-            });
-            container.appendChild(btn);
+    updateDock() {
+        const container = document.getElementById('dock');
+        if (!container) return;
+        const items = container.querySelectorAll('.dock-item[data-app]:not([data-app="app-launcher"])');
+        items.forEach(item => {
+            const appId = item.dataset.app;
+            const indicator = item.querySelector('.dock-indicator');
+            if (!indicator) return;
+            const isRunning = this.state.openWindows.some(w => w.appId === appId && !w.minimized);
+            indicator.classList.toggle('running', isRunning);
+            item.classList.toggle('running', isRunning);
         });
     }
 
@@ -1023,7 +1035,7 @@ class WebOSApp {
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
             win.style.left = Math.max(0, initialX + dx) + 'px';
-            win.style.top = Math.max(0, initialY + dy) + 'px';
+            win.style.top = Math.max(32, initialY + dy) + 'px';
             this.handleWindowSnap(win, windowId);
         });
 
@@ -1091,7 +1103,7 @@ class WebOSApp {
     }
 
     initNotepad(windowId) {
-        const notes = localStorage.getItem('webos_notes');
+        const notes = localStorage.getItem('jeados_notes') || localStorage.getItem('webos_notes');
         const textarea = document.getElementById(`notepad-textarea-${windowId}`);
         const statusEl = document.getElementById(`notepad-status-${windowId}`);
         const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
@@ -1103,7 +1115,7 @@ class WebOSApp {
             if (statusEl) statusEl.textContent = 'Non salvato...';
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
-                localStorage.setItem('webos_notes', textarea.value);
+                localStorage.setItem('jeados_notes', textarea.value);
                 if (statusEl) statusEl.textContent = 'Salvato ✓';
                 this.playSound('success');
             }, 800);
@@ -1127,7 +1139,7 @@ class WebOSApp {
         if (!textarea) return;
         if (confirm('Sei sicuro di voler svuotare il blocco note?')) {
             textarea.value = '';
-            localStorage.removeItem('webos_notes');
+            localStorage.removeItem('jeados_notes');
             if (statusEl) statusEl.textContent = 'Pronto';
             if (wordcountEl) wordcountEl.textContent = '0 parole';
             this.playSound('success');
@@ -1170,7 +1182,7 @@ class WebOSApp {
         const ts = this.terminalState[windowId];
 
         const welcomeLines = [
-            { type: 'welcome', text: 'WebOS Educativo - Terminale v1.0' },
+            { type: 'welcome', text: 'JeadOS - Terminale v1.0' },
             { type: 'welcome', text: 'Digita "help" per vedere i comandi disponibili.' },
             { type: 'blank' },
         ];
@@ -1183,7 +1195,7 @@ class WebOSApp {
                 if (cmd) {
                     ts.history.push(cmd);
                     ts.historyIndex = ts.history.length;
-                    this.terminalPrint(windowId, `utente@webos:${ts.cwd === '/' ? '~' : ts.cwd}$ ${cmd}`, 'command');
+                    this.terminalPrint(windowId, `utente@jeados:${ts.cwd === '/' ? '~' : ts.cwd}$ ${cmd}`, 'command');
                 }
                 this.terminalExecute(windowId, cmd);
                 input.focus();
@@ -1410,7 +1422,7 @@ class WebOSApp {
         const prompt = document.getElementById(`terminal-prompt-${windowId}`);
         if (prompt) {
             const displayPath = ts.cwd === '/' ? '~' : `~${ts.cwd}`;
-            prompt.innerHTML = `utente@webos:${displayPath}$&nbsp;`;
+            prompt.innerHTML = `utente@jeados:${displayPath}$&nbsp;`;
         }
     }
 
@@ -1451,16 +1463,16 @@ class WebOSApp {
         lines.forEach(l => this.terminalPrint(windowId, l.text, l.type));
         this.terminalPrint(windowId, '', 'blank');
         const user = this.state.profile || 'utente';
-        const hostname = 'webos';
-        const os = 'WebOS Educativo v1.0';
-        const kernel = '5.15.0-webos';
+        const hostname = 'jeados';
+        const os = 'JeadOS v1.0';
+        const kernel = '5.15.0-jeados';
         const uptime = this.getUptime();
         const shell = 'bash 5.1.16';
         const resolution = `${window.innerWidth}x${window.innerHeight}`;
-        const de = 'WebOS Desktop';
+        const de = 'JeadOS Desktop';
         const theme = 'Glassmorphism';
         const icons = 'Noto Color';
-        const term = 'WebOS Terminal';
+        const term = 'JeadOS Terminal';
         const cpu = `${(Math.random() * 2 + 1).toFixed(1)} GHz @ ${Math.floor(Math.random() * 4 + 2)} Core`;
         const mem = `${Math.floor(Math.random() * 400 + 512)} MB / ${Math.floor(Math.random() * 500 + 2048)} MB`;
 
@@ -1695,20 +1707,20 @@ class WebOSApp {
     }
 
     initNotepad(windowId) {
-        const notes = localStorage.getItem('webos_notes');
+        const notes = localStorage.getItem('jeados_notes') || localStorage.getItem('webos_notes');
         const editor = document.getElementById(`notepad-editor-${windowId}`);
         const statusEl = document.getElementById(`notepad-status-${windowId}`);
         const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
         if (!editor) return;
         editor.textContent = notes || '';
-        editor.style.fontSize = localStorage.getItem('webos_notes_fontsize') || '14px';
+        editor.style.fontSize = localStorage.getItem('jeados_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14px';
         this.updateNotepadWordCount(windowId);
         let saveTimeout;
         editor.addEventListener('input', () => {
             if (statusEl) statusEl.textContent = 'Non salvato...';
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
-                localStorage.setItem('webos_notes', editor.textContent);
+                localStorage.setItem('jeados_notes', editor.textContent);
                 if (statusEl) statusEl.textContent = 'Salvato ✓';
                 this.playSound('success');
             }, 800);
@@ -1726,10 +1738,10 @@ class WebOSApp {
     notepadFontSize(windowId, delta) {
         const editor = document.getElementById(`notepad-editor-${windowId}`);
         if (!editor) return;
-        const current = parseInt(localStorage.getItem('webos_notes_fontsize') || '14');
+        const current = parseInt(localStorage.getItem('jeados_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14');
         const newSize = Math.max(10, Math.min(28, current + delta * 2));
         editor.style.fontSize = newSize + 'px';
-        localStorage.setItem('webos_notes_fontsize', newSize + 'px');
+        localStorage.setItem('jeados_notes_fontsize', newSize + 'px');
     }
 
     updateNotepadWordCount(windowId) {
@@ -2085,7 +2097,7 @@ class WebOSApp {
 
     setFmView(view) {
         this.state.fmView = view;
-        localStorage.setItem('webos_fm_view', view);
+        localStorage.setItem('jeados_fm_view', view);
         const winId = this.state.activeWindow;
         if (winId) {
             const path = this.state.fmCurrentPath[winId] || '/';
@@ -2600,7 +2612,7 @@ class WebOSApp {
             <div class="browser-toolbar">
                 <button class="browser-btn" onclick="app.browserBack('${windowId}')" title="Indietro">←</button>
                 <button class="browser-btn" onclick="app.browserForward('${windowId}')" title="Avanti">→</button>
-                <input type="text" class="browser-url" id="browser-url-${windowId}" value="webos://home" readonly>
+                <input type="text" class="browser-url" id="browser-url-${windowId}" value="jeados://home" readonly>
             </div>
             <div class="browser-content" id="browser-content-${windowId}">
                 ${this.getBrowserPage('home')}
@@ -2766,12 +2778,12 @@ class WebOSApp {
         if (urlInput) {
             urlInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    const val = urlInput.value.replace('webos://', '').trim().toLowerCase();
+                    const val = urlInput.value.replace('jeados://', '').trim().toLowerCase();
                     const pages = this.getBrowserPages();
                     if (pages.includes(val)) {
                         this.navigateBrowser(val);
                     } else {
-                        urlInput.value = 'webos://home';
+                        urlInput.value = 'jeados://home';
                         this.navigateBrowser('home');
                     }
                 }
@@ -2786,7 +2798,7 @@ class WebOSApp {
         const url = document.getElementById(`browser-url-${activeWin.id}`);
         if (content) {
             content.innerHTML = this.getBrowserPage(page);
-            if (url) url.value = `webos://${page}`;
+            if (url) url.value = `jeados://${page}`;
         }
     }
 
@@ -2795,7 +2807,7 @@ class WebOSApp {
         const url = document.getElementById(`browser-url-${windowId}`);
         if (content) {
             content.innerHTML = this.getBrowserPage('home');
-            if (url) url.value = 'webos://home';
+            if (url) url.value = 'jeados://home';
         }
     }
 
@@ -2804,7 +2816,7 @@ class WebOSApp {
         const url = document.getElementById(`browser-url-${windowId}`);
         if (content) {
             content.innerHTML = this.getBrowserPage('internet');
-            if (url) url.value = 'webos://internet';
+            if (url) url.value = 'jeados://internet';
         }
     }
 
@@ -2895,36 +2907,7 @@ class WebOSApp {
     // ===== Settings =====
     getSettingsContent(windowId) {
         return `
-            <div class="settings-section">
-                <h3>🎨 Aspetto</h3>
-                <div class="settings-option">
-                    <span class="settings-label">Sfondo</span>
-                    <div class="settings-control">
-                        ${Object.keys(this.wallpapers).filter(w => !['aurora','ocean','matrix'].includes(w)).map(w => `
-                            <button class="settings-btn ${this.state.wallpaper === w ? 'active' : ''}"
-                                    onclick="app.setWallpaper('${w}')">${w.charAt(0).toUpperCase() + w.slice(1)}</button>
-                        `).join('')}
-                    </div>
-                </div>
-                <div class="settings-option">
-                    <span class="settings-label">Sfondo animato</span>
-                    <div class="settings-control">
-                        ${['aurora', 'ocean', 'matrix'].map(w => `
-                            <button class="settings-btn ${this.state.wallpaper === w ? 'active' : ''}"
-                                    onclick="app.setWallpaper('${w}')">${w.charAt(0).toUpperCase() + w.slice(1)}</button>
-                        `).join('')}
-                    </div>
-                </div>
-                <div class="settings-option">
-                    <span class="settings-label">Dimensione icone</span>
-                    <div class="settings-control">
-                        ${['small', 'medium', 'large'].map(s => `
-                            <button class="settings-btn ${this.state.iconSize === s ? 'active' : ''}"
-                                    onclick="app.setIconSize('${s}')">${s === 'small' ? 'Piccole' : s === 'medium' ? 'Medie' : 'Grandi'}</button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
+            ${this.getAppearanceContent(windowId)}
 
             <div class="settings-section">
                 <h3>👤 Modalità</h3>
@@ -2978,7 +2961,7 @@ class WebOSApp {
 
     setWallpaper(wallpaper) {
         this.state.wallpaper = wallpaper;
-        localStorage.setItem('webos_wallpaper', wallpaper);
+        localStorage.setItem('jeados_wallpaper', wallpaper);
         this.applySettings();
         this.showToast('Sfondo cambiato', `Nuovo sfondo: "${wallpaper}".`, 'success');
         this.addNotification('Sfondo', `Sfondo cambiato in "${wallpaper}".`, 'info');
@@ -2987,13 +2970,13 @@ class WebOSApp {
 
     setIconSize(size) {
         this.state.iconSize = size;
-        localStorage.setItem('webos_iconSize', size);
+        localStorage.setItem('jeados_iconSize', size);
         this.applySettings();
     }
 
     setUserMode(mode) {
         this.state.userMode = mode;
-        localStorage.setItem('webos_mode', mode);
+        localStorage.setItem('jeados_mode', mode);
         this.applySettings();
         this.showToast('Modalità cambiata', `Modalità: "${mode}".`, 'success');
         this.addNotification('Modalità', `Modalità cambiata in "${mode}".`, 'info');
@@ -3007,7 +2990,7 @@ class WebOSApp {
 
     resetFilesystem() {
         if (confirm('Sei sicuro? Tutti i file e le cartelle verranno cancellati.')) {
-            localStorage.removeItem('webos_filesystem');
+            localStorage.removeItem('jeados_filesystem');
             this.initFilesystem();
             this.showToast('Ripristino', 'File ripristinati ai valori predefiniti.', 'success');
             this.addNotification('File ripristinati', 'Il filesystem è stato ripristinato ai valori predefiniti.', 'info');
@@ -3500,7 +3483,8 @@ class WebOSApp {
             if (win) win.remove();
         });
         this.state.openWindows = [];
-        this.updateTaskbarApps();
+        this.updateDock();
+        this.updateTopBar();
         this.showToast('Spegnimento', 'Il sistema si sta spegnendo.', 'info');
         this.addNotification('Spegnimento', 'Il sistema si sta spegnendo.', 'info');
     }
@@ -3508,8 +3492,8 @@ class WebOSApp {
     wakeUp() {
         const shutdownScreen = document.getElementById('shutdown-screen');
         shutdownScreen.classList.add('hidden');
-        this.showToast('Riaccensione', 'Bentornato nel WebOS Educativo!', 'success');
-        this.addNotification('Riaccensione', 'Bentornato nel WebOS Educativo!', 'success');
+        this.showToast('Riaccensione', 'Bentornato in JeadOS!', 'success');
+        this.addNotification('Riaccensione', 'Bentornato in JeadOS!', 'success');
         this.showTutorMessage('Bentornato! Sei di nuovo nel tuo computer virtuale.');
     }
 
@@ -3558,25 +3542,25 @@ class WebOSApp {
 
     saveNotifications() {
         try {
-            localStorage.setItem('webos_notifications', JSON.stringify(this.state.notifications));
+            localStorage.setItem('jeados_notifications', JSON.stringify(this.state.notifications));
         } catch (e) { }
     }
 
     saveTrash() {
         try {
-            localStorage.setItem('webos_trash', JSON.stringify(this.state.trash));
+            localStorage.setItem('jeados_trash', JSON.stringify(this.state.trash));
         } catch (e) { }
     }
 
     saveRecentApps() {
         try {
-            localStorage.setItem('webos_recent_apps', JSON.stringify(this.state.recentApps));
+            localStorage.setItem('jeados_recent_apps', JSON.stringify(this.state.recentApps));
         } catch (e) { }
     }
 
     saveRecentFiles() {
         try {
-            localStorage.setItem('webos_recent_files', JSON.stringify(this.state.recentFiles));
+            localStorage.setItem('jeados_recent_files', JSON.stringify(this.state.recentFiles));
         } catch (e) { }
     }
 
@@ -3843,7 +3827,7 @@ class WebOSApp {
         this.galleryCurrentIndex = this.galleryCurrentIndex || {};
         this.gallerySlideshowActive = this.gallerySlideshowActive || {};
 
-        const saved = localStorage.getItem('webos_gallery');
+        const saved = localStorage.getItem('jeados_gallery') || localStorage.getItem('webos_gallery');
         if (saved) {
             try {
                 this.galleryImages[windowId] = JSON.parse(saved);
@@ -3902,7 +3886,7 @@ class WebOSApp {
 
     saveGallery(windowId) {
         try {
-            localStorage.setItem('webos_gallery', JSON.stringify(this.galleryImages[windowId] || []));
+            localStorage.setItem('jeados_gallery', JSON.stringify(this.galleryImages[windowId] || []));
         } catch (e) {
             this.showToast('Errore', 'Spazio di archiviazione pieno. Elimina alcune immagini.', 'error');
         }
@@ -4129,7 +4113,7 @@ class WebOSApp {
         this.musicRepeat = this.musicRepeat || {};
         this.musicRepeat[windowId] = false;
 
-        const saved = localStorage.getItem('webos_music');
+        const saved = localStorage.getItem('jeados_music') || localStorage.getItem('webos_music');
         if (saved) {
             try {
                 this.musicTracks[windowId] = JSON.parse(saved);
@@ -4195,7 +4179,7 @@ class WebOSApp {
 
     saveMusic(windowId) {
         try {
-            localStorage.setItem('webos_music', JSON.stringify(this.musicTracks[windowId] || []));
+            localStorage.setItem('jeados_music', JSON.stringify(this.musicTracks[windowId] || []));
         } catch (e) {
             this.showToast('Errore', 'Spazio di archiviazione pieno. Elimina alcuni brani.', 'error');
         }
@@ -4379,10 +4363,231 @@ class WebOSApp {
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
+
+    // ===== New Shell: Activities =====
+    toggleActivities(forceState = null) {
+        const overlay = document.getElementById('activities-overlay');
+        if (forceState !== null) {
+            this.state.activitiesOpen = forceState;
+        } else {
+            this.state.activitiesOpen = !this.state.activitiesOpen;
+        }
+        if (this.state.activitiesOpen) {
+            if (overlay) overlay.classList.remove('hidden');
+            this.renderActivitiesWindows();
+            this.renderActivitiesWorkspaces();
+            this.playSound('open');
+        } else {
+            if (overlay) overlay.classList.add('hidden');
+        }
+    }
+
+    renderActivitiesWindows() {
+        const container = document.getElementById('activities-windows');
+        if (!container) return;
+        if (this.state.openWindows.length === 0) {
+            container.innerHTML = '<div class="activities-empty">Nessuna finestra aperta</div>';
+            return;
+        }
+        container.innerHTML = this.state.openWindows.map(w => {
+            const win = document.getElementById(w.id);
+            const isActive = this.state.activeWindow === w.id;
+            return `
+                <div class="activities-window-thumb ${isActive ? 'active' : ''}" onclick="app.focusWindow('${w.id}'); app.toggleActivities(false);">
+                    <div class="activities-window-thumb-header">
+                        <span>${w.icon}</span>
+                        <span>${w.title}</span>
+                    </div>
+                    <div class="activities-window-thumb-body"></div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderActivitiesWorkspaces() {
+        const list = document.getElementById('workspace-list');
+        if (!list) return;
+        const items = list.querySelectorAll('.workspace-item');
+        items.forEach(item => {
+            const ws = parseInt(item.dataset.ws);
+            item.classList.toggle('active', ws === this.state.currentWorkspace);
+        });
+    }
+
+    switchWorkspace(num) {
+        if (num < 1 || num > 3) return;
+        this.state.currentWorkspace = num;
+        this.renderActivitiesWorkspaces();
+        this.addNotification('Spazio di lavoro', `Spazio di lavoro ${num} selezionato.`, 'info');
+        this.showToast('Spazio di lavoro', `Spazio di lavoro ${num} selezionato.`, 'info', 2000);
+    }
+
+    handleActivitiesSearch(query) {
+        const container = document.getElementById('activities-windows');
+        if (!container) return;
+        const q = query.toLowerCase().trim();
+        if (!q) {
+            this.renderActivitiesWindows();
+            return;
+        }
+        const matched = this.state.openWindows.filter(w => {
+            return w.title.toLowerCase().includes(q) || w.appId.toLowerCase().includes(q);
+        });
+        if (matched.length === 0) {
+            container.innerHTML = '<div class="activities-empty">Nessuna finestra trovata</div>';
+            return;
+        }
+        container.innerHTML = matched.map(w => {
+            const isActive = this.state.activeWindow === w.id;
+            return `
+                <div class="activities-window-thumb ${isActive ? 'active' : ''}" onclick="app.focusWindow('${w.id}'); app.toggleActivities(false);">
+                    <div class="activities-window-thumb-header">
+                        <span>${w.icon}</span>
+                        <span>${w.title}</span>
+                    </div>
+                    <div class="activities-window-thumb-body"></div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    handleActivitiesKeydown(event) {
+        if (event.key === 'Escape') {
+            this.toggleActivities(false);
+        }
+    }
+
+    // ===== New Shell: Top Bar =====
+    updateTopBar() {
+        const center = document.getElementById('top-bar-center');
+        if (!center) return;
+        const activeWin = this.state.openWindows.find(w => w.id === this.state.activeWindow && !w.minimized);
+        if (activeWin) {
+            center.textContent = activeWin.title;
+            center.classList.add('active');
+        } else {
+            center.textContent = '';
+            center.classList.remove('active');
+        }
+    }
+
+    // ===== New Shell: Dock =====
+    updateDock() {
+        const container = document.getElementById('dock');
+        if (!container) return;
+        const items = container.querySelectorAll('.dock-item[data-app]:not([data-app="app-launcher"])');
+        items.forEach(item => {
+            const appId = item.dataset.app;
+            const indicator = item.querySelector('.dock-indicator');
+            if (!indicator) return;
+            const isRunning = this.state.openWindows.some(w => w.appId === appId && !w.minimized);
+            indicator.classList.toggle('running', isRunning);
+            item.classList.toggle('running', isRunning);
+        });
+    }
+
+    // ===== Appearance / Settings =====
+    getAppearanceContent(windowId) {
+        const a = this.state.appearance;
+        return `
+            <div class="settings-section">
+                <h3>🎨 Aspetto</h3>
+                <div class="settings-option">
+                    <span class="settings-label">Tema</span>
+                    <div class="settings-control">
+                        ${['light', 'dark', 'auto'].map(t => `
+                            <button class="settings-btn ${a.theme === t ? 'active' : ''}" onclick="app.setAppearance('theme', '${t}')">${t === 'light' ? 'Chiaro' : t === 'dark' ? 'Scuro' : 'Auto'}</button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="settings-option">
+                    <span class="settings-label">Posizione dock</span>
+                    <div class="settings-control">
+                        ${['bottom', 'left', 'right'].map(p => `
+                            <button class="settings-btn ${a.dockPosition === p ? 'active' : ''}" onclick="app.setAppearance('dockPosition', '${p}')">${p === 'bottom' ? 'In basso' : p === 'left' ? 'A sinistra' : 'A destra'}</button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="settings-option">
+                    <span class="settings-label">Dimensione dock</span>
+                    <div class="settings-control">
+                        ${['small', 'medium', 'large'].map(s => `
+                            <button class="settings-btn ${a.dockSize === s ? 'active' : ''}" onclick="app.setAppearance('dockSize', '${s}')">${s === 'small' ? 'Piccola' : s === 'medium' ? 'Media' : 'Grande'}</button>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="settings-option">
+                    <span class="settings-label">Barra superiore</span>
+                    <div class="settings-control">
+                        <button class="settings-btn ${a.topBarVisible ? 'active' : ''}" onclick="app.setAppearance('topBarVisible', true)">Visibile</button>
+                        <button class="settings-btn ${!a.topBarVisible ? 'active' : ''}" onclick="app.setAppearance('topBarVisible', false)">Nascosta</button>
+                    </div>
+                </div>
+                <div class="settings-option">
+                    <span class="settings-label">Animazioni</span>
+                    <div class="settings-control">
+                        <button class="settings-btn ${a.animationsEnabled ? 'active' : ''}" onclick="app.setAppearance('animationsEnabled', true)">Attive</button>
+                        <button class="settings-btn ${!a.animationsEnabled ? 'active' : ''}" onclick="app.setAppearance('animationsEnabled', false)">Disattivate</button>
+                    </div>
+                </div>
+                <div class="settings-option">
+                    <span class="settings-label">Dimensione caratteri</span>
+                    <div class="settings-control">
+                        ${['small', 'medium', 'large'].map(s => `
+                            <button class="settings-btn ${a.fontSize === s ? 'active' : ''}" onclick="app.setAppearance('fontSize', '${s}')">${s === 'small' ? 'Piccola' : s === 'medium' ? 'Media' : 'Grande'}</button>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    initAppearance(windowId) {
+        this.applyAppearanceSettings();
+    }
+
+    setAppearance(key, value) {
+        this.state.appearance[key] = value;
+        const lsKey = 'jeados_' + key;
+        localStorage.setItem(lsKey, value);
+        this.applyAppearanceSettings();
+        this.showToast('Aspetto', 'Impostazioni aspetto aggiornate.', 'info', 2000);
+        this.playSound('success');
+    }
+
+    applyAppearanceSettings() {
+        const a = this.state.appearance;
+        const topBar = document.getElementById('top-bar');
+        const dock = document.getElementById('dock');
+        if (topBar) {
+            topBar.classList.toggle('hidden', !a.topBarVisible);
+        }
+        if (dock) {
+            dock.classList.toggle('hidden', false);
+            dock.classList.remove('dock-left', 'dock-right');
+            if (a.dockPosition === 'left') dock.classList.add('dock-left');
+            else if (a.dockPosition === 'right') dock.classList.add('dock-right');
+        }
+        const fontSizes = { small: '12px', medium: '14px', large: '16px' };
+        document.body.style.fontSize = fontSizes[a.fontSize] || '14px';
+        if (a.animationsEnabled) {
+            document.body.classList.remove('no-animations');
+        } else {
+            document.body.classList.add('no-animations');
+        }
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        let theme = a.theme;
+        if (theme === 'auto') theme = prefersDark ? 'dark' : 'light';
+        if (theme === 'dark') {
+            document.body.classList.add('dark-theme');
+        } else {
+            document.body.classList.remove('dark-theme');
+        }
+    }
 }
 
 // Initialize app when DOM is ready
 let app;
 document.addEventListener('DOMContentLoaded', () => {
-    app = new WebOSApp();
+    app = new JeadOSApp();
 });
