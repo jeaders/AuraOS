@@ -52,6 +52,12 @@ class TutorAI {
                 'come si visualizza in griglia': 'Nel File Manager puoi cambiare la vista: clicca l\'icona della griglia per vedere i file come icone grandi, o l\'icona dell\'elenco per vederli in una tabella!',
                 'come si ordina per data': 'Nel File Manager usa il menu a tendina "Ordina per" per ordinare i file per nome, data, dimensione o tipo!',
                 'come si usa il launcher': ' Premi Ctrl+Spazio o clicca l\'icona della lente nel menu per aprire il launcher. Scrivi il nome di un\'app o di un file e premi Invio per aprirlo!',
+                'come si usa la galleria': 'Nella Galleria puoi caricare le tue foto, visualizzarle in griglia, ingrandirle, fare slideshow ed eliminarle. Prova a caricare una immagine!',
+                'come si carica una foto': 'Per caricare una foto, apri la Galleria e clicca il pulsante "Carica". Scegli le immagini dal tuo computer e vedile nella griglia!',
+                'come si fa una slideshow': 'Clicca su una immagine per ingrandirla, poi clicca il pulsante "Slideshow" per avviare la presentazione. Le immagini cambiano ogni 3 secondi!',
+                'come si usa il player musicale': 'Nel Player Musicale puoi caricare i tuoi brani, riprodurli, mettere in pausa, passare al brano successivo e controllare il volume. C\'è anche la playlist laterale!',
+                'come si carica una canzone': 'Per caricare una canzone, apri il Player Musicale e clicca "+ Aggiungi" nella sidebar. Scegli i file audio dal tuo computer!',
+                'come si controlla il volume': 'Nel Player Musicale usa il cursore del volume per alzare o abbassare il volume. C\'è anche l\'icona per muto!',
             },
             bambino: {
                 'cosa è il computer': 'Il computer è una macchina magica che ti permette di disegnare, giocare, imparare e tanto altro!',

@@ -62,6 +62,8 @@ class WebOSApp {
             { id: 'guide', name: 'Guida', icon: '📖', description: 'Impara come usarlo' },
             { id: 'games', name: 'Giochi', icon: '🎮', description: 'Impara divertendoti' },
             { id: 'calculator', name: 'Calcolatrice', icon: '🧮', description: 'Fai calcoli veloci' },
+            { id: 'gallery', name: 'Galleria', icon: '🖼️', description: 'Guarda le tue immagini' },
+            { id: 'music', name: 'Musica', icon: '🎵', description: 'Ascolta la tua musica' },
         ];
 
         this.wallpapers = {
@@ -808,8 +810,8 @@ class WebOSApp {
             icon: appConfig.icon,
             x: 50 + (this.state.openWindows.length * 30),
             y: 50 + (this.state.openWindows.length * 30),
-            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : appId === 'terminal' ? 700 : appId === 'task-manager' ? 600 : 600,
-            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : appId === 'terminal' ? 450 : appId === 'task-manager' ? 500 : 450,
+            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : appId === 'terminal' ? 700 : appId === 'task-manager' ? 600 : appId === 'gallery' ? 700 : appId === 'music' ? 750 : 600,
+            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : appId === 'terminal' ? 450 : appId === 'task-manager' ? 500 : appId === 'gallery' ? 500 : appId === 'music' ? 500 : 450,
             minimized: false,
             maximized: false,
             prevX: null,
@@ -882,6 +884,10 @@ class WebOSApp {
                 return this.getGamesContent(windowId);
             case 'calculator':
                 return this.getCalculatorContent(windowId);
+            case 'gallery':
+                return this.getGalleryContent(windowId);
+            case 'music':
+                return this.getMusicContent(windowId);
             default:
                 return '<p>App in caricamento...</p>';
         }
@@ -951,6 +957,13 @@ class WebOSApp {
         }
         const winData = this.state.openWindows.find(w => w.id === windowId);
         if (winData) {
+            if (winData.appId === 'music' && this.musicAudio && this.musicAudio[windowId]) {
+                this.musicAudio[windowId].pause();
+                this.musicAudio[windowId].src = '';
+            }
+            if (winData.appId === 'gallery' && this.gallerySlideshow && this.gallerySlideshow[windowId]) {
+                this.stopGallerySlideshow(windowId);
+            }
             this.showToast('Chiusa', `"${winData.title}" chiusa.`, 'info', 2000);
             this.addNotification('Finestra chiusa', `"${winData.title}" è stata chiusa.`, 'info');
         }
@@ -1543,7 +1556,7 @@ class WebOSApp {
         const appIcons = {
             'file-manager': '📁', 'notepad': '📝', 'terminal': '💻', 'task-manager': '📊',
             'browser': '🌐', 'tutor': '🤖', 'settings': '⚙️', 'guide': '📖',
-            'games': '🎮', 'calculator': '🧮',
+            'games': '🎮', 'calculator': '🧮', 'gallery': '🖼️', 'music': '🎵',
         };
 
         let rows = '';
@@ -1760,6 +1773,12 @@ class WebOSApp {
                 break;
             case 'calculator':
                 this.initCalculator(windowId);
+                break;
+            case 'gallery':
+                this.initGallery(windowId);
+                break;
+            case 'music':
+                this.initMusic(windowId);
                 break;
         }
     }
@@ -3465,6 +3484,8 @@ class WebOSApp {
             'notepad': 'Ecco il Blocco Note! Scrivi appunti, annotazioni o quello che vuoi. Si salva automaticamente!',
             'terminal': 'Benvenuto nel Terminale! Qui puoi usare la riga di comando come un vero hacker. Prova i comandi: ls, cd, mkdir, neofetch e molti altri! Digita "help" per la lista completa.',
             'task-manager': 'Ecco il Task Manager! Qui puoi vedere tutte le app aperte, quanto usano di memoria e CPU, e anche chiudere le app che non servono più. Si aggiorna automaticamente ogni 2 secondi!',
+            'gallery': 'Benvenuto nella Galleria! Qui puoi caricare le tue foto, visualizzarle in griglia, ingrandirle, fare slideshow ed eliminarle.',
+            'music': 'Benvenuto nel Player Musicale! Qui puoi caricare i tuoi brani, riprodurli, controllare il volume, usare la playlist e molto altro!',
         };
         return messages[appId] || 'Benvenuto!';
     }
@@ -3780,6 +3801,583 @@ class WebOSApp {
         this.state.recentFiles.unshift({ path, name, time: Date.now() });
         if (this.state.recentFiles.length > 10) this.state.recentFiles.pop();
         this.saveRecentFiles();
+    }
+
+    // ===== Gallery App =====
+    getGalleryContent(windowId) {
+        return `
+            <div class="gallery-wrapper" id="gallery-${windowId}">
+                <div class="gallery-toolbar">
+                    <span class="gallery-title">🖼️ Galleria</span>
+                    <div class="gallery-controls">
+                        <span class="gallery-count" id="gallery-count-${windowId}">0 immagini</span>
+                        <label class="gallery-upload-btn">
+                            📷 Carica
+                            <input type="file" accept="image/*" multiple id="gallery-upload-${windowId}" style="display:none;">
+                        </label>
+                    </div>
+                </div>
+                <div class="gallery-main" id="gallery-main-${windowId}">
+                    <div class="gallery-empty" id="gallery-empty-${windowId}">
+                        <div class="gallery-empty-icon">🖼️</div>
+                        <div class="gallery-empty-text">Nessuna immagine</div>
+                        <div class="gallery-empty-sub">Carica le tue immagini per visualizzarle</div>
+                    </div>
+                    <div class="gallery-grid" id="gallery-grid-${windowId}"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    initGallery(windowId) {
+        const uploadInput = document.getElementById(`gallery-upload-${windowId}`);
+        const grid = document.getElementById(`gallery-grid-${windowId}`);
+        const empty = document.getElementById(`gallery-empty-${windowId}`);
+        const countEl = document.getElementById(`gallery-count-${windowId}`);
+        if (!uploadInput || !grid) return;
+
+        this.galleryImages = this.galleryImages || {};
+        this.galleryImages[windowId] = [];
+        this.gallerySlideshow = this.gallerySlideshow || {};
+        this.gallerySlideshow[windowId] = null;
+        this.galleryCurrentIndex = this.galleryCurrentIndex || {};
+        this.gallerySlideshowActive = this.gallerySlideshowActive || {};
+
+        const saved = localStorage.getItem('webos_gallery');
+        if (saved) {
+            try {
+                this.galleryImages[windowId] = JSON.parse(saved);
+            } catch (e) {
+                this.galleryImages[windowId] = [];
+            }
+        }
+
+        this.renderGalleryGrid(windowId);
+
+        uploadInput.addEventListener('change', (e) => {
+            this.handleGalleryUpload(windowId, e.target.files);
+            uploadInput.value = '';
+        });
+    }
+
+    handleGalleryUpload(windowId, files) {
+        if (!files || files.length === 0) return;
+        const images = this.galleryImages[windowId] || [];
+        let loaded = 0;
+        const total = files.length;
+
+        Array.from(files).forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    images.push({
+                        id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                        name: file.name,
+                        dataUrl: e.target.result,
+                        size: file.size,
+                        date: Date.now(),
+                    });
+                    loaded++;
+                    if (loaded >= total) {
+                        this.saveGallery(windowId);
+                        this.renderGalleryGrid(windowId);
+                        this.playSound('success');
+                        this.showToast('Caricate', `${loaded} immagini caricate con successo.`, 'success');
+                    }
+                } catch (err) {
+                    this.showToast('Errore', 'Impossibile caricare l\'immagine. Spazio di archiviazione pieno?', 'error');
+                    this.playSound('error');
+                }
+            };
+            reader.onerror = () => {
+                loaded++;
+                if (loaded >= total) {
+                    this.showToast('Errore', 'Si è verificato un errore durante il caricamento.', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    saveGallery(windowId) {
+        try {
+            localStorage.setItem('webos_gallery', JSON.stringify(this.galleryImages[windowId] || []));
+        } catch (e) {
+            this.showToast('Errore', 'Spazio di archiviazione pieno. Elimina alcune immagini.', 'error');
+        }
+    }
+
+    renderGalleryGrid(windowId) {
+        const grid = document.getElementById(`gallery-grid-${windowId}`);
+        const empty = document.getElementById(`gallery-empty-${windowId}`);
+        const countEl = document.getElementById(`gallery-count-${windowId}`);
+        if (!grid) return;
+
+        const images = this.galleryImages[windowId] || [];
+        if (countEl) countEl.textContent = `${images.length} immagine${images.length !== 1 ? 'e' : ''}`;
+
+        if (images.length === 0) {
+            if (empty) empty.style.display = 'flex';
+            grid.innerHTML = '';
+            return;
+        }
+
+        if (empty) empty.style.display = 'none';
+        grid.innerHTML = images.map((img, index) => `
+            <div class="gallery-item" onclick="app.openGalleryLightbox('${windowId}', ${index})">
+                <img class="gallery-thumb" src="${img.dataUrl}" alt="${img.name}" loading="lazy">
+                <div class="gallery-item-name">${img.name}</div>
+                <button class="gallery-item-delete" onclick="event.stopPropagation(); app.deleteGalleryImage('${windowId}', ${index})" title="Elimina">🗑️</button>
+            </div>
+        `).join('');
+    }
+
+    openGalleryLightbox(windowId, index) {
+        const images = this.galleryImages[windowId] || [];
+        if (images.length === 0) return;
+
+        this.stopGallerySlideshow(windowId);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'gallery-lightbox';
+        overlay.id = `gallery-lightbox-${windowId}`;
+        overlay.innerHTML = `
+            <button class="gallery-lightbox-close" onclick="app.closeGalleryLightbox('${windowId}')">✕</button>
+            <button class="gallery-lightbox-nav gallery-lightbox-prev" onclick="app.galleryPrev('${windowId}')">‹</button>
+            <img class="gallery-lightbox-img" id="gallery-lightbox-img-${windowId}" src="${images[index].dataUrl}" alt="${images[index].name}">
+            <button class="gallery-lightbox-nav gallery-lightbox-next" onclick="app.galleryNext('${windowId}')">›</button>
+            <div class="gallery-lightbox-info">
+                <span id="gallery-lightbox-name-${windowId}">${images[index].name}</span>
+                <span id="gallery-lightbox-counter-${windowId}">${index + 1} / ${images.length}</span>
+            </div>
+            <div class="gallery-lightbox-controls">
+                <button class="gallery-slideshow-btn" id="gallery-slideshow-btn-${windowId}" onclick="app.toggleGallerySlideshow('${windowId}')">▶ Slideshow</button>
+                <button class="gallery-slideshow-btn" onclick="app.deleteGalleryImage('${windowId}', ${index}); app.closeGalleryLightbox('${windowId}');">🗑️ Elimina</button>
+            </div>
+        `;
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.closeGalleryLightbox(windowId);
+        });
+
+        document.body.appendChild(overlay);
+        this.galleryCurrentIndex[windowId] = index;
+
+        const overlayEl = document.getElementById(`gallery-lightbox-${windowId}`);
+        if (overlayEl) {
+            overlayEl.addEventListener('mouseenter', () => {
+                if (this.gallerySlideshow && this.gallerySlideshow[windowId]) {
+                    clearInterval(this.gallerySlideshow[windowId]);
+                    this.gallerySlideshow[windowId] = null;
+                }
+            });
+            overlayEl.addEventListener('mouseleave', () => {
+                if (this.gallerySlideshowActive && this.gallerySlideshowActive[windowId]) {
+                    this.startGallerySlideshow(windowId);
+                }
+            });
+        }
+
+        document.addEventListener('keydown', this.galleryKeyHandler = (e) => {
+            if (e.key === 'ArrowLeft') this.galleryPrev(windowId);
+            if (e.key === 'ArrowRight') this.galleryNext(windowId);
+            if (e.key === 'Escape') this.closeGalleryLightbox(windowId);
+        });
+    }
+
+    closeGalleryLightbox(windowId) {
+        this.stopGallerySlideshow(windowId);
+        const overlay = document.getElementById(`gallery-lightbox-${windowId}`);
+        if (overlay) overlay.remove();
+        if (this.galleryKeyHandler) {
+            document.removeEventListener('keydown', this.galleryKeyHandler);
+            this.galleryKeyHandler = null;
+        }
+    }
+
+    galleryNext(windowId) {
+        const images = this.galleryImages[windowId] || [];
+        if (images.length === 0) return;
+        this.galleryCurrentIndex[windowId] = (this.galleryCurrentIndex[windowId] + 1) % images.length;
+        this.updateGalleryLightbox(windowId);
+    }
+
+    galleryPrev(windowId) {
+        const images = this.galleryImages[windowId] || [];
+        if (images.length === 0) return;
+        this.galleryCurrentIndex[windowId] = (this.galleryCurrentIndex[windowId] - 1 + images.length) % images.length;
+        this.updateGalleryLightbox(windowId);
+    }
+
+    updateGalleryLightbox(windowId) {
+        const images = this.galleryImages[windowId] || [];
+        const idx = this.galleryCurrentIndex[windowId] || 0;
+        const img = document.getElementById(`gallery-lightbox-img-${windowId}`);
+        const nameEl = document.getElementById(`gallery-lightbox-name-${windowId}`);
+        const counterEl = document.getElementById(`gallery-lightbox-counter-${windowId}`);
+        if (img) img.src = images[idx].dataUrl;
+        if (nameEl) nameEl.textContent = images[idx].name;
+        if (counterEl) counterEl.textContent = `${idx + 1} / ${images.length}`;
+    }
+
+    toggleGallerySlideshow(windowId) {
+        if (this.gallerySlideshowActive && this.gallerySlideshowActive[windowId]) {
+            this.gallerySlideshowActive[windowId] = false;
+            this.stopGallerySlideshow(windowId);
+        } else {
+            this.gallerySlideshowActive[windowId] = true;
+            this.startGallerySlideshow(windowId);
+        }
+    }
+
+    startGallerySlideshow(windowId) {
+        const btn = document.getElementById(`gallery-slideshow-btn-${windowId}`);
+        if (btn) btn.textContent = '⏸ Pausa';
+        this.gallerySlideshow[windowId] = setInterval(() => {
+            this.galleryNext(windowId);
+        }, 3000);
+    }
+
+    stopGallerySlideshow(windowId) {
+        if (this.gallerySlideshow && this.gallerySlideshow[windowId]) {
+            clearInterval(this.gallerySlideshow[windowId]);
+            this.gallerySlideshow[windowId] = null;
+        }
+        const btn = document.getElementById(`gallery-slideshow-btn-${windowId}`);
+        if (btn) btn.textContent = '▶ Slideshow';
+    }
+
+    deleteGalleryImage(windowId, index) {
+        const images = this.galleryImages[windowId] || [];
+        if (index < 0 || index >= images.length) return;
+        if (!confirm(`Eliminare "${images[index].name}"?`)) return;
+        images.splice(index, 1);
+        this.saveGallery(windowId);
+        this.renderGalleryGrid(windowId);
+        this.playSound('success');
+        this.showToast('Eliminata', 'Immagine eliminata.', 'info');
+    }
+
+    // ===== Music Player App =====
+    getMusicContent(windowId) {
+        return `
+            <div class="music-wrapper" id="music-${windowId}">
+                <div class="music-sidebar">
+                    <div class="music-sidebar-header">
+                        <span class="music-sidebar-title">🎵 Playlist</span>
+                        <label class="music-upload-btn">
+                            + Aggiungi
+                            <input type="file" accept="audio/*" multiple id="music-upload-${windowId}" style="display:none;">
+                        </label>
+                    </div>
+                    <div class="music-playlist" id="music-playlist-${windowId}">
+                        <div class="music-empty" id="music-empty-${windowId}">
+                            <div class="music-empty-icon">🎵</div>
+                            <div class="music-empty-text">Nessun brano</div>
+                            <div class="music-empty-sub">Aggiungi file audio per iniziare</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="music-main" id="music-main-${windowId}">
+                    <div class="music-visualizer" id="music-visualizer-${windowId}">
+                        ${Array.from({length: 24}, (_, i) => `<div class="music-visualizer-bar" style="animation-delay: ${i * 0.06}s; height: ${15 + Math.random() * 70}%;"></div>`).join('')}
+                    </div>
+                    <div class="music-now-playing">
+                        <div class="music-now-playing-icon">🎵</div>
+                        <div class="music-now-playing-name" id="music-track-name-${windowId}">Seleziona un brano</div>
+                    </div>
+                    <div class="music-controls">
+                        <button class="music-btn" id="music-prev-${windowId}" onclick="app.prevMusicTrack('${windowId}')">⏮</button>
+                        <button class="music-btn music-btn-play" id="music-play-${windowId}" onclick="app.toggleMusicPlay('${windowId}')">▶</button>
+                        <button class="music-btn" id="music-next-${windowId}" onclick="app.nextMusicTrack('${windowId}')">⏭</button>
+                    </div>
+                    <div class="music-progress-wrapper">
+                        <span class="music-time" id="music-current-time-${windowId}">0:00</span>
+                        <div class="music-progress" id="music-progress-${windowId}" onclick="app.seekMusic('${windowId}', event)">
+                            <div class="music-progress-fill" id="music-progress-fill-${windowId}"></div>
+                        </div>
+                        <span class="music-time" id="music-total-time-${windowId}">0:00</span>
+                    </div>
+                    <div class="music-extra-controls">
+                        <button class="music-btn music-btn-small" id="music-shuffle-${windowId}" onclick="app.toggleShuffle('${windowId}')">🔀</button>
+                        <button class="music-btn music-btn-small" id="music-repeat-${windowId}" onclick="app.toggleRepeat('${windowId}')">🔁</button>
+                        <div class="music-volume">
+                            <span class="music-volume-icon">🔊</span>
+                            <input type="range" class="music-volume-slider" id="music-volume-${windowId}" min="0" max="100" value="80" oninput="app.setVolume('${windowId}', this.value)">
+                        </div>
+                    </div>
+                    <audio id="music-audio-${windowId}" preload="auto" style="position:absolute;width:0;height:0;overflow:hidden;"></audio>
+                </div>
+            </div>
+        `;
+    }
+
+    initMusic(windowId) {
+        const uploadInput = document.getElementById(`music-upload-${windowId}`);
+        const audio = document.getElementById(`music-audio-${windowId}`);
+        if (!uploadInput || !audio) return;
+
+        this.musicTracks = this.musicTracks || {};
+        this.musicTracks[windowId] = [];
+        this.musicAudio = this.musicAudio || {};
+        this.musicAudio[windowId] = audio;
+        this.musicCurrentIndex = this.musicCurrentIndex || {};
+        this.musicCurrentIndex[windowId] = -1;
+        this.musicShuffle = this.musicShuffle || {};
+        this.musicShuffle[windowId] = false;
+        this.musicRepeat = this.musicRepeat || {};
+        this.musicRepeat[windowId] = false;
+
+        const saved = localStorage.getItem('webos_music');
+        if (saved) {
+            try {
+                this.musicTracks[windowId] = JSON.parse(saved);
+            } catch (e) {
+                this.musicTracks[windowId] = [];
+            }
+        }
+
+        this.renderMusicPlaylist(windowId);
+
+        audio.addEventListener('timeupdate', () => this.updateMusicProgress(windowId));
+        audio.addEventListener('ended', () => this.handleMusicEnded(windowId));
+        audio.addEventListener('loadedmetadata', () => {
+            const totalEl = document.getElementById(`music-total-time-${windowId}`);
+            if (totalEl) totalEl.textContent = this.formatTime(audio.duration);
+        });
+
+        uploadInput.addEventListener('change', (e) => {
+            this.handleMusicUpload(windowId, e.target.files);
+            uploadInput.value = '';
+        });
+    }
+
+    handleMusicUpload(windowId, files) {
+        if (!files || files.length === 0) return;
+        const tracks = this.musicTracks[windowId] || [];
+        let loaded = 0;
+        const total = files.length;
+
+        Array.from(files).forEach(file => {
+            if (!file.type.startsWith('audio/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    tracks.push({
+                        id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+                        name: file.name.replace(/\.[^/.]+$/, ''),
+                        dataUrl: e.target.result,
+                        size: file.size,
+                        date: Date.now(),
+                    });
+                    loaded++;
+                    if (loaded >= total) {
+                        this.saveMusic(windowId);
+                        this.renderMusicPlaylist(windowId);
+                        this.playSound('success');
+                        this.showToast('Caricati', `${loaded} brani caricati con successo.`, 'success');
+                    }
+                } catch (err) {
+                    this.showToast('Errore', 'Impossibile caricare il brano. Spazio di archiviazione pieno?', 'error');
+                    this.playSound('error');
+                }
+            };
+            reader.onerror = () => {
+                loaded++;
+                if (loaded >= total) {
+                    this.showToast('Errore', 'Si è verificato un errore durante il caricamento.', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    saveMusic(windowId) {
+        try {
+            localStorage.setItem('webos_music', JSON.stringify(this.musicTracks[windowId] || []));
+        } catch (e) {
+            this.showToast('Errore', 'Spazio di archiviazione pieno. Elimina alcuni brani.', 'error');
+        }
+    }
+
+    renderMusicPlaylist(windowId) {
+        const playlist = document.getElementById(`music-playlist-${windowId}`);
+        const empty = document.getElementById(`music-empty-${windowId}`);
+        if (!playlist) return;
+
+        const tracks = this.musicTracks[windowId] || [];
+        const currentIndex = this.musicCurrentIndex[windowId] || -1;
+
+        if (tracks.length === 0) {
+            if (empty) {
+                empty.style.display = 'flex';
+                playlist.innerHTML = '';
+                playlist.appendChild(empty);
+            }
+            return;
+        }
+
+        if (empty) empty.style.display = 'none';
+        playlist.innerHTML = tracks.map((track, index) => `
+            <div class="music-track-item ${index === currentIndex ? 'playing' : ''}" onclick="app.playMusicTrack('${windowId}', ${index})">
+                <div class="music-track-info">
+                    <div class="music-track-name">${track.name}</div>
+                </div>
+                <button class="music-track-delete" onclick="event.stopPropagation(); app.deleteMusicTrack('${windowId}', ${index})" title="Elimina">✕</button>
+            </div>
+        `).join('');
+    }
+
+    playMusicTrack(windowId, index) {
+        const tracks = this.musicTracks[windowId] || [];
+        if (index < 0 || index >= tracks.length) return;
+        const audio = this.musicAudio[windowId];
+        if (!audio) return;
+
+        if (this.musicCurrentIndex[windowId] === index && !audio.paused) {
+            this.pauseMusic(windowId);
+            return;
+        }
+
+        this.musicCurrentIndex[windowId] = index;
+        audio.src = tracks[index].dataUrl;
+        audio.play().then(() => {
+            this.updateMusicUI(windowId);
+            this.renderMusicPlaylist(windowId);
+        }).catch(() => {
+            this.showToast('Errore', 'Impossibile riprodurre il brano.', 'error');
+        });
+    }
+
+    pauseMusic(windowId) {
+        const audio = this.musicAudio[windowId];
+        if (!audio) return;
+        audio.pause();
+        this.updateMusicUI(windowId);
+    }
+
+    toggleMusicPlay(windowId) {
+        const audio = this.musicAudio[windowId];
+        if (!audio) return;
+        if (audio.paused) {
+            if (!audio.src || audio.src === window.location.href) {
+                const tracks = this.musicTracks[windowId] || [];
+                if (tracks.length > 0) {
+                    this.playMusicTrack(windowId, 0);
+                    return;
+                }
+            }
+            audio.play().catch(() => {});
+        } else {
+            this.pauseMusic(windowId);
+        }
+        this.updateMusicUI(windowId);
+    }
+
+    nextMusicTrack(windowId) {
+        const tracks = this.musicTracks[windowId] || [];
+        if (tracks.length === 0) return;
+        let index = this.musicCurrentIndex[windowId] || 0;
+        if (this.musicShuffle[windowId]) {
+            index = Math.floor(Math.random() * tracks.length);
+        } else {
+            index = (index + 1) % tracks.length;
+        }
+        this.playMusicTrack(windowId, index);
+    }
+
+    prevMusicTrack(windowId) {
+        const tracks = this.musicTracks[windowId] || [];
+        if (tracks.length === 0) return;
+        let index = this.musicCurrentIndex[windowId] || 0;
+        if (this.musicShuffle[windowId]) {
+            index = Math.floor(Math.random() * tracks.length);
+        } else {
+            index = (index - 1 + tracks.length) % tracks.length;
+        }
+        this.playMusicTrack(windowId, index);
+    }
+
+    seekMusic(windowId, e) {
+        const audio = this.musicAudio[windowId];
+        const progress = document.getElementById(`music-progress-${windowId}`);
+        if (!audio || !progress || !audio.duration) return;
+        const rect = progress.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        audio.currentTime = ratio * audio.duration;
+    }
+
+    setVolume(windowId, value) {
+        const audio = this.musicAudio[windowId];
+        if (audio) audio.volume = value / 100;
+    }
+
+    toggleShuffle(windowId) {
+        this.musicShuffle[windowId] = !this.musicShuffle[windowId];
+        const btn = document.getElementById(`music-shuffle-${windowId}`);
+        if (btn) btn.classList.toggle('active', this.musicShuffle[windowId]);
+    }
+
+    toggleRepeat(windowId) {
+        this.musicRepeat[windowId] = !this.musicRepeat[windowId];
+        const btn = document.getElementById(`music-repeat-${windowId}`);
+        if (btn) btn.classList.toggle('active', this.musicRepeat[windowId]);
+    }
+
+    handleMusicEnded(windowId) {
+        if (this.musicRepeat[windowId]) {
+            const audio = this.musicAudio[windowId];
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(() => {});
+            }
+        } else {
+            this.nextMusicTrack(windowId);
+        }
+    }
+
+    updateMusicProgress(windowId) {
+        const audio = this.musicAudio[windowId];
+        if (!audio || !audio.duration) return;
+        const fill = document.getElementById(`music-progress-fill-${windowId}`);
+        const currentEl = document.getElementById(`music-current-time-${windowId}`);
+        if (fill) fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+        if (currentEl) currentEl.textContent = this.formatTime(audio.currentTime);
+    }
+
+    updateMusicUI(windowId) {
+        const audio = this.musicAudio[windowId];
+        if (!audio) return;
+        const playBtn = document.getElementById(`music-play-${windowId}`);
+        if (playBtn) playBtn.textContent = audio.paused ? '▶' : '⏸';
+        const visualizer = document.getElementById(`music-visualizer-${windowId}`);
+        if (visualizer) visualizer.classList.toggle('paused', audio.paused);
+    }
+
+    deleteMusicTrack(windowId, index) {
+        const tracks = this.musicTracks[windowId] || [];
+        if (index < 0 || index >= tracks.length) return;
+        if (!confirm(`Eliminare "${tracks[index].name}"?`)) return;
+
+        const wasPlaying = (this.musicCurrentIndex[windowId] === index) && this.musicAudio[windowId] && !this.musicAudio[windowId].paused;
+        if (wasPlaying) this.pauseMusic(windowId);
+
+        tracks.splice(index, 1);
+        if (this.musicCurrentIndex[windowId] >= tracks.length) {
+            this.musicCurrentIndex[windowId] = Math.max(0, tracks.length - 1);
+        }
+        this.saveMusic(windowId);
+        this.renderMusicPlaylist(windowId);
+        this.playSound('success');
+        this.showToast('Eliminato', 'Brano eliminato dalla playlist.', 'info');
+    }
+
+    formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 }
 
