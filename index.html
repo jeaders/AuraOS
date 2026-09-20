@@ -55,6 +55,13 @@
         </button>
         <div id="taskbar-apps" class="taskbar-apps"></div>
         <div class="taskbar-right">
+            <button class="notification-bell" id="notification-bell" onclick="app.toggleNotificationCenter()" title="Notifiche">
+                🔔
+                <span class="notification-badge hidden" id="notification-badge">0</span>
+            </button>
+            <button class="notification-bell" id="search-btn" onclick="app.openLauncher()" title="Cerca">
+                🔍
+            </button>
             <span id="taskbar-clock" class="taskbar-clock"></span>
         </div>
     </div>
@@ -126,6 +133,36 @@
     <div id="tutor-bubble" class="tutor-bubble hidden">
         <div class="tutor-bubble-content" id="tutor-bubble-content"></div>
         <button class="tutor-bubble-close" onclick="app.hideTutorBubble()">✕</button>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Notification Center -->
+    <div id="notification-center" class="notification-center">
+        <div class="notification-center-header">
+            <span class="notification-center-title">🔔 Notifiche</span>
+            <button class="notification-center-clear" onclick="app.clearAllNotifications()">Cancella tutto</button>
+        </div>
+        <div class="notification-list" id="notification-list"></div>
+    </div>
+
+    <!-- Global Launcher -->
+    <div id="launcher-overlay" class="launcher-overlay" onclick="if(event.target===this)app.closeLauncher()">
+        <div class="launcher-panel">
+            <div class="launcher-input-wrapper">
+                <span class="launcher-icon">🔍</span>
+                <input type="text" class="launcher-input" id="launcher-input" placeholder="Cerca app, file, impostazioni..."
+                       oninput="app.handleLauncherInput(this.value)" onkeydown="app.handleLauncherKeydown(event)">
+            </div>
+            <div class="launcher-categories" id="launcher-categories">
+                <button class="launcher-category-btn active" data-cat="all" onclick="app.setLauncherCategory('all')">Tutto</button>
+                <button class="launcher-category-btn" data-cat="apps" onclick="app.setLauncherCategory('apps')">App</button>
+                <button class="launcher-category-btn" data-cat="files" onclick="app.setLauncherCategory('files')">File</button>
+                <button class="launcher-category-btn" data-cat="settings" onclick="app.setLauncherCategory('settings')">Impostazioni</button>
+            </div>
+            <div class="launcher-results" id="launcher-results"></div>
+        </div>
     </div>
 
     <!-- Voice button -->

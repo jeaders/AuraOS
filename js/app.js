@@ -16,7 +16,40 @@ class WebOSApp {
             contextMenuOpen: false,
             currentSnapWindow: null,
             bootTime: Date.now(),
+            fmView: localStorage.getItem('webos_fm_view') || 'grid',
+            fmSort: { field: 'name', direction: 'asc' },
+            clipboard: { type: null, items: [] },
+            fmSelectedItems: [],
+            trash: [],
+            notifications: [],
+            launcherOpen: false,
+            launcherSelectedIndex: -1,
+            launcherCategory: 'all',
+            recentApps: [],
+            recentFiles: [],
+            fmCurrentPath: {},
+            notificationCenterOpen: false,
         };
+
+        try {
+            const savedTrash = localStorage.getItem('webos_trash');
+            if (savedTrash) this.state.trash = JSON.parse(savedTrash);
+        } catch (e) { this.state.trash = []; }
+
+        try {
+            const savedNotifs = localStorage.getItem('webos_notifications');
+            if (savedNotifs) this.state.notifications = JSON.parse(savedNotifs);
+        } catch (e) { this.state.notifications = []; }
+
+        try {
+            const savedRecentApps = localStorage.getItem('webos_recent_apps');
+            if (savedRecentApps) this.state.recentApps = JSON.parse(savedRecentApps);
+        } catch (e) { this.state.recentApps = []; }
+
+        try {
+            const savedRecentFiles = localStorage.getItem('webos_recent_files');
+            if (savedRecentFiles) this.state.recentFiles = JSON.parse(savedRecentFiles);
+        } catch (e) { this.state.recentFiles = []; }
 
         this.desktopApps = [
             { id: 'file-manager', name: 'File e cartelle', icon: '📁', description: 'Gestisci i tuoi file' },
@@ -52,6 +85,7 @@ class WebOSApp {
         this.setupEventListeners();
         this.updateClock();
         setInterval(() => this.updateClock(), 1000);
+        this.updateNotificationBadge();
         if (this.state.profile) {
             this.boot();
         } else {
@@ -124,6 +158,15 @@ class WebOSApp {
                 }
             };
         }
+
+        if (!this.state.filesystem['/'].children['Cestino']) {
+            this.state.filesystem['/'].children['Cestino'] = {
+                type: 'folder',
+                name: 'Cestino',
+                children: {},
+                isTrash: true
+            };
+        }
     }
 
     saveFilesystem() {
@@ -143,6 +186,11 @@ class WebOSApp {
             }
             if (this.state.contextMenuOpen) {
                 this.hideContextMenu();
+            }
+            const notifCenter = document.getElementById('notification-center');
+            const notifBell = document.getElementById('notification-bell');
+            if (this.state.notificationCenterOpen && notifCenter && !notifCenter.contains(e.target) && !notifBell.contains(e.target)) {
+                this.closeNotificationCenter();
             }
         });
 
@@ -167,10 +215,37 @@ class WebOSApp {
                 this.toggleStartMenu(false);
                 this.hideTutorBubble();
                 this.hideContextMenu();
+                this.closeLauncher();
+                this.closeNotificationCenter();
             }
             if (e.key === 'F10' && e.ctrlKey) {
                 e.preventDefault();
                 this.minimizeAllWindows();
+            }
+            if (e.ctrlKey && e.key === ' ') {
+                e.preventDefault();
+                this.openLauncher();
+            }
+            if (e.ctrlKey && e.key === 'c' && this.state.activeWindow) {
+                const winData = this.state.openWindows.find(w => w.id === this.state.activeWindow);
+                if (winData && winData.appId === 'file-manager') {
+                    e.preventDefault();
+                    this.fmCopy();
+                }
+            }
+            if (e.ctrlKey && e.key === 'x' && this.state.activeWindow) {
+                const winData = this.state.openWindows.find(w => w.id === this.state.activeWindow);
+                if (winData && winData.appId === 'file-manager') {
+                    e.preventDefault();
+                    this.fmCut();
+                }
+            }
+            if (e.ctrlKey && e.key === 'v' && this.state.activeWindow) {
+                const winData = this.state.openWindows.find(w => w.id === this.state.activeWindow);
+                if (winData && winData.appId === 'file-manager') {
+                    e.preventDefault();
+                    this.fmPaste();
+                }
             }
             if (document.getElementById(`calc-display-${this.state.activeWindow}`)) {
                 this.handleCalculatorKeyboard(e);
@@ -218,6 +293,7 @@ class WebOSApp {
             bootScreen.classList.add('hidden');
             this.boot();
         }, 800);
+        this.addNotification('Accesso effettuato', `Profilo "${profile}" selezionato.`, 'success');
     }
 
     boot() {
@@ -680,6 +756,7 @@ class WebOSApp {
     toggleSounds(enabled) {
         this.state.soundsEnabled = enabled;
         localStorage.setItem('webos_sounds', enabled);
+        this.showToast('Audio', enabled ? 'Effetti sonori attivati.' : 'Effetti sonori disattivati.', 'info', 2000);
         if (enabled) this.playSound('success');
     }
 
@@ -700,6 +777,7 @@ class WebOSApp {
         }
         if (this.state.startMenuOpen) {
             menu.classList.remove('hidden');
+            this.addNotification('Menu avviato', 'Menu Start aperto.', 'info');
         } else {
             menu.classList.add('hidden');
         }
@@ -709,6 +787,7 @@ class WebOSApp {
     openApp(appId) {
         this.toggleStartMenu(false);
         this.playSound('click');
+        this.addToRecentApps(appId);
         const appConfig = this.desktopApps.find(a => a.id === appId);
         if (!appConfig) return;
         const existing = this.state.openWindows.find(w => w.appId === appId);
@@ -869,6 +948,11 @@ class WebOSApp {
                 this.state.openWindows = this.state.openWindows.filter(w => w.id !== windowId);
                 this.updateTaskbarApps();
             }, 150);
+        }
+        const winData = this.state.openWindows.find(w => w.id === windowId);
+        if (winData) {
+            this.showToast('Chiusa', `"${winData.title}" chiusa.`, 'info', 2000);
+            this.addNotification('Finestra chiusa', `"${winData.title}" è stata chiusa.`, 'info');
         }
     }
 
@@ -1682,14 +1766,41 @@ class WebOSApp {
 
     // ===== File Manager =====
     getFileManagerContent(windowId) {
+        this.state.fmCurrentPath[windowId] = '/';
         return `
-            <div class="file-manager-toolbar">
-                <button class="file-manager-btn" id="up-btn-${windowId}" onclick="app.goUp('${windowId}')" style="display:none;">⬆️ Su</button>
-                <button class="file-manager-btn" onclick="app.createFolder('${windowId}')">📁 Nuova cartella</button>
-                <button class="file-manager-btn" onclick="app.createFile('${windowId}')">📄 Nuovo file</button>
+            <div class="fm-toolbar">
+                <div class="fm-toolbar-group">
+                    <button class="file-manager-btn" id="up-btn-${windowId}" onclick="app.goUp('${windowId}')" style="display:none;">⬆️ Su</button>
+                    <button class="file-manager-btn" onclick="app.createFolder('${windowId}')">📁 Nuova cartella</button>
+                    <button class="file-manager-btn" onclick="app.createFile('${windowId}')">📄 Nuovo file</button>
+                </div>
+                <div class="fm-toolbar-group">
+                    <div class="fm-view-toggle">
+                        <button class="fm-view-btn ${this.state.fmView === 'grid' ? 'active' : ''}" onclick="app.setFmView('grid')" title="Vista griglia">⊞</button>
+                        <button class="fm-view-btn ${this.state.fmView === 'list' ? 'active' : ''}" onclick="app.setFmView('list')" title="Vista elenco">☰</button>
+                    </div>
+                    <select class="fm-sort-select" id="fm-sort-${windowId}" onchange="app.setFmSort(this.value)">
+                        <option value="name-asc">Nome (A-Z)</option>
+                        <option value="name-desc">Nome (Z-A)</option>
+                        <option value="date-asc">Data (vecchia)</option>
+                        <option value="date-desc">Data (recente)</option>
+                        <option value="size-asc">Dimensione (piccola)</option>
+                        <option value="size-desc">Dimensione (grande)</option>
+                        <option value="type-asc">Tipo (A-Z)</option>
+                    </select>
+                </div>
+                <input type="text" class="fm-search" id="fm-search-${windowId}" placeholder="🔍 Cerca nella cartella..." oninput="app.fmSearch(this.value)">
                 <div class="file-breadcrumb" id="breadcrumb-${windowId}"></div>
             </div>
-            <div class="file-list" id="filelist-${windowId}"></div>
+            <div class="fm-main">
+                <div class="fm-list-pane" id="filelist-${windowId}"></div>
+                <div class="fm-preview-pane" id="fm-preview-${windowId}">
+                    <div style="text-align:center;color:#a0aec0;padding:40px 10px;">
+                        <div style="font-size:48px;margin-bottom:10px;">📄</div>
+                        <div>Seleziona un file per vedere l'anteprima</div>
+                    </div>
+                </div>
+            </div>
         `;
     }
 
@@ -1701,46 +1812,330 @@ class WebOSApp {
         const container = document.getElementById(`filelist-${windowId}`);
         const upBtn = document.getElementById(`up-btn-${windowId}`);
         if (!container) return;
+        this.state.fmCurrentPath[windowId] = path || '/';
         if (upBtn) upBtn.style.display = path === '/' ? 'none' : 'inline-block';
         this.renderBreadcrumb(windowId, path);
         const folder = this.getFolderByPath(path);
         if (!folder || !folder.children) {
-            container.innerHTML = '<p style="color:#a0aec0;">Cartella vuota</p>';
+            container.className = 'fm-list-pane fm-list-view';
+            container.innerHTML = '<div class="fm-empty">Cartella vuota</div>';
+            this.addDropZone(container, windowId, path);
+            return;
+        }
+        const searchQuery = (document.getElementById(`fm-search-${windowId}`)?.value || '').toLowerCase().trim();
+        let items = Object.entries(folder.children);
+        if (searchQuery) {
+            items = items.filter(([name, item]) => name.toLowerCase().includes(searchQuery));
+        }
+        items = this.sortItems(items);
+        if (items.length === 0) {
+            container.className = 'fm-list-pane fm-list-view';
+            container.innerHTML = searchQuery ? '<div class="fm-no-results">Nessun risultato per la ricerca</div>' : '<div class="fm-empty">Cartella vuota</div>';
+            this.addDropZone(container, windowId, path);
             return;
         }
         container.innerHTML = '';
-        Object.entries(folder.children).forEach(([name, item]) => {
-            const div = document.createElement('div');
-            div.className = 'file-item';
-            const size = item.type === 'file' ? this.getFileSize(item.content) : null;
+        const view = this.state.fmView;
+        if (view === 'list') {
+            container.className = 'fm-list-pane fm-list-view';
+            const header = document.createElement('div');
+            header.className = 'fm-list-item';
+            header.style.fontWeight = '600';
+            header.style.fontSize = '11px';
+            header.style.color = '#a0aec0';
+            header.style.textTransform = 'uppercase';
+            header.style.cursor = 'default';
+            header.innerHTML = `
+                <div class="fm-list-col-icon">Nome</div>
+                <div class="fm-list-col-size">Dimensione</div>
+                <div class="fm-list-col-type">Tipo</div>
+                <div class="fm-list-col-date">Modificato</div>
+            `;
+            container.appendChild(header);
+        } else {
+            container.className = 'fm-list-pane fm-grid-view';
+        }
+        const selectedSet = new Set(this.state.fmSelectedItems);
+        const cutSet = new Set((this.state.clipboard.type === 'cut' ? this.state.clipboard.items : []).map(i => i.name));
+        items.forEach(([name, item]) => {
+            const isSelected = selectedSet.has(name);
+            const isCut = cutSet.has(name);
+            const size = item.type === 'file' ? this.getFileSize(item.content || '') : (item.type === 'folder' ? this.getFolderCount(item) + ' oggetti' : '-');
             const ext = this.getFileExtension(name);
             const icon = item.type === 'folder' ? '📁' : this.getFileTypeIcon(ext);
-            div.innerHTML = `
-                <div class="file-icon">${icon}</div>
-                <div class="file-name">${name}</div>
-                ${size ? `<div class="file-size">${size}</div>` : ''}
-            `;
-            div.addEventListener('click', () => {
-                if (item.type === 'folder') {
-                    this.renderFileList(windowId, path === '/' ? `/${name}` : `${path}/${name}`);
-                } else {
-                    this.showFilePreview(windowId, path, name);
-                }
-            });
-            div.addEventListener('dblclick', () => {
-                if (item.type === 'folder') {
-                    this.renderFileList(windowId, path === '/' ? `/${name}` : `${path}/${name}`);
-                } else {
-                    this.showFilePreview(windowId, path, name);
-                }
-            });
-            div.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.showFileContextMenu(e.clientX, e.clientY, windowId, path, name, item);
-            });
-            container.appendChild(div);
+            const typeName = item.type === 'folder' ? 'Cartella' : this.getFileTypeName(ext);
+            const dateStr = item.modifiedAt ? new Date(item.modifiedAt).toLocaleDateString('it-IT') : '-';
+            if (view === 'list') {
+                const row = document.createElement('div');
+                row.className = `fm-list-item${isSelected ? ' selected' : ''}${isCut ? ' cut-item' : ''}`;
+                row.draggable = true;
+                row.dataset.name = name;
+                row.dataset.type = item.type;
+                row.innerHTML = `
+                    <div class="fm-list-col-icon"><span>${icon}</span><span class="fm-list-col-name">${name}</span></div>
+                    <div class="fm-list-col-size">${size}</div>
+                    <div class="fm-list-col-type">${typeName}</div>
+                    <div class="fm-list-col-date">${dateStr}</div>
+                `;
+                this.attachFileItemEvents(row, windowId, path, name, item);
+                container.appendChild(row);
+            } else {
+                const card = document.createElement('div');
+                card.className = `fm-grid-item${isSelected ? ' selected' : ''}${isCut ? ' cut-item' : ''}`;
+                card.draggable = true;
+                card.dataset.name = name;
+                card.dataset.type = item.type;
+                card.innerHTML = `
+                    <div class="fm-grid-icon">${icon}</div>
+                    <div class="fm-grid-name">${name}</div>
+                    <div class="fm-grid-size">${size}</div>
+                `;
+                this.attachFileItemEvents(card, windowId, path, name, item);
+                container.appendChild(card);
+            }
         });
+        this.addDropZone(container, windowId, path);
+        if (!this.state.fmSearchQuery) {
+            this.updatePreviewPane(windowId, null);
+        }
+    }
+
+    addDropZone(container, windowId, path) {
+        let dropZone = container.parentElement.querySelector('.fm-drop-zone');
+        if (!dropZone) {
+            dropZone = document.createElement('div');
+            dropZone.className = 'fm-drop-zone';
+            const listPane = document.querySelector(`#filelist-${windowId}`);
+            if (listPane && listPane.parentElement) {
+                listPane.parentElement.appendChild(dropZone);
+            }
+        }
+        dropZone.className = 'fm-drop-zone visible';
+        dropZone.innerHTML = '<div class="fm-drop-zone-icon">📌</div><div>Rilascia qui per spostare in questa cartella</div>';
+        dropZone.onclick = () => {
+            if (this.state.clipboard.items && this.state.clipboard.items.length > 0) {
+                this.fmPaste(windowId, path);
+            }
+        };
+        dropZone.ondragover = (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        };
+        dropZone.ondragleave = () => {
+            dropZone.classList.remove('drag-over');
+        };
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const data = e.dataTransfer.getData('text/plain');
+            if (!data) return;
+            let dragData;
+            try { dragData = JSON.parse(data); } catch (err) { return; }
+            if (dragData.path !== path) {
+                this.moveItem(dragData, path, windowId, path);
+            }
+        };
+    }
+
+    attachFileItemEvents(el, windowId, path, name, item) {
+        el.addEventListener('click', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                const idx = this.state.fmSelectedItems.indexOf(name);
+                if (idx >= 0) this.state.fmSelectedItems.splice(idx, 1);
+                else this.state.fmSelectedItems.push(name);
+                this.renderFileList(windowId, path);
+                return;
+            }
+            this.state.fmSelectedItems = [name];
+            if (item.type === 'folder') {
+                this.renderFileList(windowId, path === '/' ? `/${name}` : `${path}/${name}`);
+                this.state.fmSearchQuery = '';
+                const searchInput = document.getElementById(`fm-search-${windowId}`);
+                if (searchInput) searchInput.value = '';
+            } else {
+                this.updatePreviewPane(windowId, path, name);
+                this.addToRecentFiles(path, name);
+            }
+        });
+        el.addEventListener('dblclick', () => {
+            if (item.type === 'folder') {
+                this.renderFileList(windowId, path === '/' ? `/${name}` : `${path}/${name}`);
+                this.state.fmSearchQuery = '';
+                const searchInput = document.getElementById(`fm-search-${windowId}`);
+                if (searchInput) searchInput.value = '';
+            } else {
+                this.showFilePreview(windowId, path, name);
+                this.addToRecentFiles(path, name);
+            }
+        });
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!this.state.fmSelectedItems.includes(name)) {
+                this.state.fmSelectedItems = [name];
+            }
+            this.showFileContextMenu(e.clientX, e.clientY, windowId, path, name, item);
+        });
+        el.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ path, name, type: item.type }));
+            e.dataTransfer.effectAllowed = 'move';
+            el.classList.add('dragging');
+            this._dragSource = { windowId, path, name };
+        });
+        el.addEventListener('dragend', () => {
+            el.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(e => e.classList.remove('drag-over'));
+        });
+        el.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (item.type === 'folder' || el.classList.contains('fm-list-pane') || el.classList.contains('fm-grid-view')) {
+                el.classList.add('drag-over');
+            }
+        });
+        el.addEventListener('dragleave', () => {
+            el.classList.remove('drag-over');
+        });
+        el.addEventListener('drop', (e) => {
+            e.preventDefault();
+            el.classList.remove('drag-over');
+            const data = e.dataTransfer.getData('text/plain');
+            if (!data) return;
+            let dragData;
+            try { dragData = JSON.parse(data); } catch (err) { return; }
+            const targetFolderPath = item.type === 'folder' ? (path === '/' ? `/${name}` : `${path}/${name}`) : path;
+            this.moveItem(dragData, targetFolderPath, windowId, path);
+        });
+    }
+
+    moveItem(dragData, targetFolderPath, windowId, currentRenderPath) {
+        const srcPath = dragData.path;
+        const srcName = dragData.name;
+        const srcFolder = this.getFolderByPath(srcPath);
+        if (!srcFolder || !srcFolder.children[srcName]) return;
+        if (srcPath === targetFolderPath || (srcPath === '/' ? `/${srcName}` : `${srcPath}/${srcName}`) === targetFolderPath) return;
+
+        // If target is trash, delete instead of move
+        if (targetFolderPath === '/Cestino') {
+            this.deleteItem(windowId, srcPath, srcName);
+            return;
+        }
+
+        const targetFolder = this.getFolderByPath(targetFolderPath);
+        if (!targetFolder || !targetFolder.children) return;
+        const item = srcFolder.children[srcName];
+        if (targetFolder.children[srcName]) {
+            this.showToast('Impossibile spostare', 'Esiste già un file o cartella con questo nome nella destinazione.', 'error');
+            return;
+        }
+        targetFolder.children[srcName] = item;
+        if (!item.modifiedAt) item.modifiedAt = Date.now();
+        delete srcFolder.children[srcName];
+        this.saveFilesystem();
+        this.renderFileList(windowId, currentRenderPath || '/');
+        this.showToast('Spostato', `"${srcName}" spostato con successo.`, 'success');
+    }
+
+    getFolderCount(folder) {
+        if (!folder || !folder.children) return 0;
+        return Object.keys(folder.children).length;
+    }
+
+    sortItems(items) {
+        const sort = this.state.fmSort;
+        const [field, direction] = sort.field === 'date' ? ['modifiedAt', sort.direction] : [sort.field, sort.direction];
+        return items.sort((a, b) => {
+            let cmp = 0;
+            if (field === 'name') {
+                cmp = a[0].localeCompare(b[0], 'it');
+            } else if (field === 'size') {
+                const sizeA = a[1].type === 'file' ? (a[1].content || '').length : 0;
+                const sizeB = b[1].type === 'file' ? (b[1].content || '').length : 0;
+                cmp = sizeA - sizeB;
+            } else if (field === 'type') {
+                const extA = this.getFileExtension(a[0]);
+                const extB = this.getFileExtension(b[0]);
+                cmp = extA.localeCompare(extB, 'it');
+            } else if (field === 'modifiedAt') {
+                const timeA = a[1].modifiedAt || 0;
+                const timeB = b[1].modifiedAt || 0;
+                cmp = timeA - timeB;
+            }
+            return direction === 'desc' ? -cmp : cmp;
+        });
+    }
+
+    setFmView(view) {
+        this.state.fmView = view;
+        localStorage.setItem('webos_fm_view', view);
+        const winId = this.state.activeWindow;
+        if (winId) {
+            const path = this.state.fmCurrentPath[winId] || '/';
+            this.renderFileList(winId, path);
+        }
+    }
+
+    setFmSort(value) {
+        const [field, direction] = value.split('-');
+        this.state.fmSort = { field, direction };
+        const winId = this.state.activeWindow;
+        if (winId) {
+            const path = this.state.fmCurrentPath[winId] || '/';
+            this.renderFileList(winId, path);
+        }
+    }
+
+    fmSearch(query) {
+        this.state.fmSearchQuery = query;
+        const winId = this.state.activeWindow;
+        if (winId) {
+            const path = this.state.fmCurrentPath[winId] || '/';
+            this.renderFileList(winId, path);
+        }
+    }
+
+    updatePreviewPane(windowId, path, filename) {
+        const pane = document.getElementById(`fm-preview-${windowId}`);
+        if (!pane) return;
+        if (!filename) {
+            pane.classList.remove('visible');
+            return;
+        }
+        const folder = this.getFolderByPath(path);
+        if (!folder || !folder.children[filename]) { pane.classList.remove('visible'); return; }
+        const file = folder.children[filename];
+        const ext = this.getFileExtension(filename);
+        const icon = file.type === 'folder' ? '📁' : this.getFileTypeIcon(ext);
+        const typeName = file.type === 'folder' ? 'Cartella' : this.getFileTypeName(ext);
+        const size = file.type === 'file' ? this.getFileSize(file.content || '') : this.getFolderCount(file) + ' oggetti';
+        let contentHtml = '';
+        if (file.type === 'file' && file.content) {
+            contentHtml = `<div class="fm-preview-content">${this.escapeHtml(file.content)}</div>`;
+        } else if (file.type === 'file') {
+            contentHtml = '<div class="fm-preview-content" style="color:#a0aec0;">File vuoto</div>';
+        }
+        const audioHtml = file.type === 'file' && ['mp3', 'wav', 'ogg'].includes(ext) ? '<div style="text-align:center;margin-top:10px;">🎵 File audio</div>' : '';
+        pane.classList.add('visible');
+        pane.innerHTML = `
+            <div class="fm-preview-icon">${icon}</div>
+            <div class="fm-preview-name">${filename}</div>
+            <div class="fm-preview-info">
+                <div><strong>Tipo:</strong> ${typeName}</div>
+                <div><strong>Dimensione:</strong> ${size}</div>
+                <div><strong>Percorso:</strong> ${path === '/' ? '/' + filename : path + '/' + filename}</div>
+            </div>
+            ${audioHtml}
+            ${contentHtml}
+            <div style="display:flex;gap:8px;margin-top:15px;flex-wrap:wrap;">
+                ${file.type === 'file' ? `<button class="file-manager-btn" onclick="app.editFile('${windowId}', '${path}', '${filename}')">✏️ Modifica</button>` : ''}
+                <button class="file-manager-btn" onclick="app.deleteItem('${windowId}', '${path}', '${name}')">🗑️ Elimina</button>
+            </div>
+        `;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     showFileContextMenu(x, y, windowId, path, name, item) {
@@ -1750,21 +2145,46 @@ class WebOSApp {
         menu.className = 'context-menu';
         menu.style.left = x + 'px';
         menu.style.top = y + 'px';
+        const hasSelection = this.state.fmSelectedItems.length > 0;
         const menuItems = item.type === 'file'
-            ? `<div class="context-menu-item" data-action="rename">✏️ Rinomina</div>
+            ? `<div class="context-menu-item" data-action="open">📂 Apri</div>
+               <div class="context-menu-separator"></div>
+               <div class="context-menu-item" data-action="rename">✏️ Rinomina</div>
+               <div class="context-menu-item" data-action="copy">📋 Copia</div>
+               <div class="context-menu-item" data-action="cut">✂️ Taglia</div>
+               ${hasSelection ? `<div class="context-menu-item" data-action="paste">📌 Incolla</div>` : ''}
+               <div class="context-menu-separator"></div>
                <div class="context-menu-item" data-action="delete">🗑️ Elimina</div>
                <div class="context-menu-separator"></div>
-               <div class="context-menu-item" data-action="info">ℹ️ Info</div>`
-            : `<div class="context-menu-item" data-action="rename">✏️ Rinomina</div>
-               <div class="context-menu-item" data-action="delete">🗑️ Elimina</div>`;
+               <div class="context-menu-item" data-action="info">ℹ️ Info</div>
+               <div class="context-menu-item" data-action="selectall">☑️ Seleziona tutto</div>`
+            : `<div class="context-menu-item" data-action="open">📂 Apri</div>
+               <div class="context-menu-separator"></div>
+               <div class="context-menu-item" data-action="rename">✏️ Rinomina</div>
+               <div class="context-menu-item" data-action="copy">📋 Copia</div>
+               <div class="context-menu-item" data-action="cut">✂️ Taglia</div>
+               ${hasSelection ? `<div class="context-menu-item" data-action="paste">📌 Incolla</div>` : ''}
+               <div class="context-menu-separator"></div>
+               <div class="context-menu-item" data-action="info">ℹ️ Info</div>
+               <div class="context-menu-item" data-action="selectall">☑️ Seleziona tutto</div>`;
         menu.innerHTML = menuItems;
         menu.querySelectorAll('.context-menu-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const action = el.dataset.action;
-                if (action === 'rename') this.renameItem(windowId, path, name);
+                if (action === 'open') {
+                    if (item.type === 'folder') {
+                        this.renderFileList(windowId, path === '/' ? `/${name}` : `${path}/${name}`);
+                    } else {
+                        this.showFilePreview(windowId, path, name);
+                    }
+                } else if (action === 'rename') this.renameItem(windowId, path, name);
+                else if (action === 'copy') this.fmCopyItem(windowId, path, name);
+                else if (action === 'cut') this.fmCutItem(windowId, path, name);
+                else if (action === 'paste') this.fmPaste(windowId, path);
                 else if (action === 'delete') this.deleteItem(windowId, path, name);
                 else if (action === 'info') this.showFileInfo(windowId, path, name);
+                else if (action === 'selectall') this.fmSelectAll(windowId, path);
                 this.hideContextMenu();
             });
         });
@@ -1775,59 +2195,245 @@ class WebOSApp {
         if (menuRect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - menuRect.height - 5) + 'px';
     }
 
+    fmCopy() {
+        if (this.state.fmSelectedItems.length === 0) return;
+        const winId = this.state.activeWindow;
+        const path = this.state.fmCurrentPath[winId] || '/';
+        const folder = this.getFolderByPath(path);
+        if (!folder) return;
+        this.state.clipboard = {
+            type: 'copy',
+            items: this.state.fmSelectedItems.map(name => ({ name, path, item: JSON.parse(JSON.stringify(folder.children[name])) }))
+        };
+        this.showToast('Copiato', `${this.state.clipboard.items.length} elemento/i copiato/i.`, 'info', 2000);
+        const winData = this.state.openWindows.find(w => w.id === winId);
+        if (winData) this.renderFileList(winId, path);
+    }
+
+    fmCopyItem(windowId, path, name) {
+        const folder = this.getFolderByPath(path);
+        if (!folder || !folder.children[name]) return;
+        this.state.clipboard = {
+            type: 'copy',
+            items: [{ name, path, item: JSON.parse(JSON.stringify(folder.children[name])) }]
+        };
+        this.showToast('Copiato', `"${name}" copiato.`, 'info', 2000);
+        this.renderFileList(windowId, path);
+    }
+
+    fmCut() {
+        if (this.state.fmSelectedItems.length === 0) return;
+        const winId = this.state.activeWindow;
+        const path = this.state.fmCurrentPath[winId] || '/';
+        const folder = this.getFolderByPath(path);
+        if (!folder) return;
+        this.state.clipboard = {
+            type: 'cut',
+            items: this.state.fmSelectedItems.map(name => ({ name, path, item: JSON.parse(JSON.stringify(folder.children[name])) }))
+        };
+        this.showToast('Tagliato', `${this.state.clipboard.items.length} elemento/i tagliato/i.`, 'warning', 2000);
+        this.renderFileList(windowId, path);
+    }
+
+    fmCutItem(windowId, path, name) {
+        const folder = this.getFolderByPath(path);
+        if (!folder || !folder.children[name]) return;
+        this.state.clipboard = {
+            type: 'cut',
+            items: [{ name, path, item: JSON.parse(JSON.stringify(folder.children[name])) }]
+        };
+        this.showToast('Tagliato', `"${name}" tagliato.`, 'warning', 2000);
+        this.renderFileList(windowId, path);
+    }
+
+    fmPaste(windowId, targetPath) {
+        if (!this.state.clipboard.items || this.state.clipboard.items.length === 0) {
+            this.showToast('Incolla', 'Nessun elemento negli appunti.', 'warning', 2000);
+            return;
+        }
+        const path = targetPath || this.state.fmCurrentPath[windowId] || '/';
+        const targetFolder = this.getFolderByPath(path);
+        if (!targetFolder || !targetFolder.children) return;
+        let pasted = 0;
+        this.state.clipboard.items.forEach(entry => {
+            const newName = this.getUniqueName(targetFolder, entry.name);
+            const newItem = JSON.parse(JSON.stringify(entry.item));
+            newItem.name = newName;
+            if (!newItem.modifiedAt) newItem.modifiedAt = Date.now();
+            targetFolder.children[newName] = newItem;
+            pasted++;
+        });
+        this.saveFilesystem();
+        if (this.state.clipboard.type === 'cut') {
+            const srcPath = this.state.clipboard.items[0]?.path;
+            const srcFolder = srcPath ? this.getFolderByPath(srcPath) : null;
+            if (srcFolder) {
+                this.state.clipboard.items.forEach(entry => {
+                    delete srcFolder.children[entry.name];
+                });
+            }
+            this.state.clipboard = { type: null, items: [] };
+        }
+        this.renderFileList(windowId, path);
+        this.showToast('Incollato', `${pasted} elemento/i incollato/i.`, 'success');
+    }
+
+    getUniqueName(folder, baseName) {
+        if (!folder.children[baseName]) return baseName;
+        const parts = baseName.split('.');
+        const ext = parts.length > 1 ? '.' + parts.pop() : '';
+        const nameBase = parts.join('.');
+        let i = 1;
+        while (folder.children[`${nameBase} (${i})${ext}`]) i++;
+        return `${nameBase} (${i})${ext}`;
+    }
+
+    fmSelectAll(windowId, path) {
+        const folder = this.getFolderByPath(path);
+        if (!folder || !folder.children) return;
+        this.state.fmSelectedItems = Object.keys(folder.children);
+        this.renderFileList(windowId, path);
+    }
+
     renameItem(windowId, path, name) {
         const folder = this.getFolderByPath(path);
         if (!folder || !folder.children[name]) return;
         const newName = prompt('Nuovo nome:', name);
         if (!newName || newName === name) return;
         if (folder.children[newName]) {
-            alert('Esiste già un file o cartella con questo nome!');
+            this.showToast('Errore', 'Esiste già un file o cartella con questo nome!', 'error');
             return;
         }
         folder.children[newName] = folder.children[name];
         folder.children[newName].name = newName;
+        if (!folder.children[newName].modifiedAt) folder.children[newName].modifiedAt = Date.now();
         delete folder.children[name];
         this.saveFilesystem();
         this.renderFileList(windowId, path);
-        this.showTutorMessage(`Ho rinominato "${name}" in "${newName}"!`);
+        this.showToast('Rinominato', `"${name}" rinominato in "${newName}".`, 'success');
     }
 
     deleteItem(windowId, path, name) {
-        if (!confirm(`Sei sicuro di voler eliminare "${name}"?`)) return;
         const folder = this.getFolderByPath(path);
-        if (folder && folder.children[name]) {
-            delete folder.children[name];
-            this.saveFilesystem();
-            this.renderFileList(windowId, path);
-            this.showTutorMessage(`Ho eliminato "${name}".`);
+        if (!folder || !folder.children[name]) return;
+        const trashFolder = this.getFolderByPath('/Cestino');
+        const trashId = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        const item = folder.children[name];
+        item._trashId = trashId;
+        item._originalPath = path;
+        item._deletedAt = Date.now();
+        trashFolder.children[trashId] = item;
+        delete folder.children[name];
+        this.state.trash.push({ trashId, name, originalPath: path, item: JSON.parse(JSON.stringify(item)), deletedAt: Date.now() });
+        this.saveFilesystem();
+        this.saveTrash();
+        this.renderFileList(windowId, path);
+        this.state.fmSelectedItems = this.state.fmSelectedItems.filter(n => n !== name);
+        this.showToast('Nel cestino', `"${name}" spostato nel Cestino.`, 'info');
+        this.showTutorMessage(`Ho spostato "${name}" nel Cestino. Puoi ripristinarlo o eliminarlo definitivamente.`);
+    }
+
+    restoreFromTrash(trashId) {
+        const idx = this.state.trash.findIndex(t => t.trashId === trashId);
+        if (idx < 0) return;
+        const entry = this.state.trash[idx];
+        const originalFolder = this.getFolderByPath(entry.originalPath);
+        const trashFolder = this.getFolderByPath('/Cestino');
+        if (!originalFolder || !trashFolder) return;
+        const item = trashFolder.children[trashId];
+        if (!item) return;
+        const restoreName = this.getUniqueName(originalFolder, entry.name);
+        item._trashId = undefined;
+        item._originalPath = undefined;
+        item._deletedAt = undefined;
+        if (!item.modifiedAt) item.modifiedAt = Date.now();
+        originalFolder.children[restoreName] = item;
+        delete trashFolder.children[trashId];
+        this.state.trash.splice(idx, 1);
+        this.saveFilesystem();
+        this.saveTrash();
+        const winId = this.state.activeWindow;
+        if (winId) {
+            const currentPath = this.state.fmCurrentPath[winId] || '/';
+            if (currentPath === '/Cestino' || currentPath === '/Cestino/') {
+                this.renderFileList(winId, '/Cestino');
+            }
         }
+        this.showToast('Ripristinato', `"${entry.name}" ripristinato.`, 'success');
+    }
+
+    permanentlyDelete(trashId) {
+        const idx = this.state.trash.findIndex(t => t.trashId === trashId);
+        if (idx < 0) return;
+        const entry = this.state.trash[idx];
+        const trashFolder = this.getFolderByPath('/Cestino');
+        if (trashFolder && trashFolder.children[trashId]) {
+            delete trashFolder.children[trashId];
+        }
+        this.state.trash.splice(idx, 1);
+        this.saveFilesystem();
+        this.saveTrash();
+        const winId = this.state.activeWindow;
+        if (winId) {
+            const currentPath = this.state.fmCurrentPath[winId] || '/';
+            if (currentPath === '/Cestino' || currentPath.startsWith('/Cestino')) {
+                this.renderFileList(winId, '/Cestino');
+            }
+        }
+        this.showToast('Eliminato', `"${entry.name}" eliminato definitivamente.`, 'error');
+    }
+
+    emptyTrash() {
+        const trashFolder = this.getFolderByPath('/Cestino');
+        if (!trashFolder) return;
+        const count = Object.keys(trashFolder.children).length;
+        if (count === 0) {
+            this.showToast('Cestino vuoto', 'Il cestino è già vuoto.', 'info');
+            return;
+        }
+        if (!confirm(`Sei sicuro di voler eliminare definitivamente ${count} elemento/i dal cestino?`)) return;
+        trashFolder.children = {};
+        this.state.trash = [];
+        this.saveFilesystem();
+        this.saveTrash();
+        const winId = this.state.activeWindow;
+        if (winId) {
+            const currentPath = this.state.fmCurrentPath[winId] || '/';
+            if (currentPath === '/Cestino' || currentPath.startsWith('/Cestino')) {
+                this.renderFileList(winId, '/Cestino');
+            }
+        }
+        this.showToast('Cestino svuotato', `${count} elemento/i eliminati definitivamente.`, 'success');
     }
 
     showFileInfo(windowId, path, name) {
         const folder = this.getFolderByPath(path);
         if (!folder || !folder.children[name]) return;
         const item = folder.children[name];
-        const size = item.type === 'file' ? this.getFileSize(item.content) : '-';
+        const size = item.type === 'file' ? this.getFileSize(item.content || '') : this.getFolderCount(item) + ' oggetti';
         const ext = this.getFileExtension(name);
         const type = item.type === 'folder' ? 'Cartella' : this.getFileTypeName(ext);
-        const content = `
-            <div style="padding: 20px;">
-                <h3 style="color: #667eea; margin-bottom: 15px;">ℹ️ Informazioni</h3>
-                <div style="background: #f7fafc; padding: 15px; border-radius: 8px; line-height: 2;">
+        const container = document.getElementById(`filelist-${windowId}`);
+        if (!container) return;
+        container.innerHTML = `
+            <div class="file-info-dialog">
+                <h3>ℹ️ Informazioni</h3>
+                <div class="info-box">
                     <p><strong>Nome:</strong> ${name}</p>
                     <p><strong>Tipo:</strong> ${type}</p>
                     <p><strong>Dimensione:</strong> ${size}</p>
                     <p><strong>Percorso:</strong> ${path === '/' ? '/' + name : path + '/' + name}</p>
+                    ${item.modifiedAt ? `<p><strong>Modificato:</strong> ${new Date(item.modifiedAt).toLocaleString('it-IT')}</p>` : ''}
                 </div>
-                <button class="file-manager-btn" style="margin-top: 15px;" onclick="app.renderFileList('${windowId}', '${path}')">← Chiudi</button>
+                <div style="display:flex;gap:10px;margin-top:15px;">
+                    <button class="file-manager-btn" onclick="app.renderFileList('${windowId}', '${path}')">← Torna alla cartella</button>
+                </div>
             </div>
         `;
-        const container = document.getElementById(`filelist-${windowId}`);
-        if (container) container.innerHTML = content;
     }
 
     getFileSize(content) {
-        if (!content) return '0 B';
+        if (!content && content !== '') return '0 B';
         const bytes = new Blob([content]).size;
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -1840,12 +2446,12 @@ class WebOSApp {
     }
 
     getFileTypeIcon(ext) {
-        const icons = { txt: '📝', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', mp3: '🎵', wav: '🎵', pdf: '📕', doc: '📘', docx: '📘', html: '🌐', js: '📜' };
+        const icons = { txt: '📝', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', mp3: '🎵', wav: '🎵', pdf: '📕', doc: '📘', docx: '📘', html: '🌐', js: '📜', zip: '🗜️', rar: '🗜️' };
         return icons[ext] || '📄';
     }
 
     getFileTypeName(ext) {
-        const names = { txt: 'File di testo', jpg: 'Immagine JPEG', jpeg: 'Immagine JPEG', png: 'Immagine PNG', gif: 'Immagine GIF', mp3: 'File audio MP3', wav: 'File audio WAV', pdf: 'Documento PDF', doc: 'Documento Word', docx: 'Documento Word', html: 'Pagina HTML', js: 'File JavaScript' };
+        const names = { txt: 'File di testo', jpg: 'Immagine JPEG', jpeg: 'Immagine JPEG', png: 'Immagine PNG', gif: 'Immagine GIF', mp3: 'File audio MP3', wav: 'File audio WAV', pdf: 'Documento PDF', doc: 'Documento Word', docx: 'Documento Word', html: 'Pagina HTML', js: 'File JavaScript', zip: 'Archivio ZIP', rar: 'Archivio RAR' };
         return names[ext] || 'File';
     }
 
@@ -1855,15 +2461,37 @@ class WebOSApp {
         const parts = path.split('/').filter(p => p);
         let html = `<span class="breadcrumb-item" onclick="app.renderFileList('${windowId}', '/')">🏠 Home</span>`;
         let currentPath = '';
+        const trashCount = this.getTrashCount();
         parts.forEach((part, i) => {
             currentPath += '/' + part;
             html += `<span class="breadcrumb-separator">/</span>`;
-            html += `<span class="breadcrumb-item" onclick="app.renderFileList('${windowId}', '${currentPath}')">${part}</span>`;
+            if (part === 'Cestino' && trashCount > 0) {
+                html += `<span class="breadcrumb-item" onclick="app.renderFileList('${windowId}', '${currentPath}')">🗑️ Cestino <span class="fm-trash-badge">${trashCount}</span></span>`;
+            } else {
+                html += `<span class="breadcrumb-item" onclick="app.renderFileList('${windowId}', '${currentPath}')">${part}</span>`;
+            }
         });
         breadcrumbEl.innerHTML = html;
     }
 
+    getTrashCount() {
+        const trashFolder = this.getFolderByPath('/Cestino');
+        return trashFolder && trashFolder.children ? Object.keys(trashFolder.children).length : 0;
+    }
+
     getFolderByPath(path) {
+        if (path === '/' || path === '/Cestino' || path === '/Cestino/') {
+            const parts = path.split('/').filter(p => p);
+            let current = this.state.filesystem['/'];
+            for (const part of parts) {
+                if (current.children && current.children[part]) {
+                    current = current.children[part];
+                } else {
+                    return null;
+                }
+            }
+            return current;
+        }
         if (path === '/') return this.state.filesystem['/'];
         const parts = path.split('/').filter(p => p);
         let current = this.state.filesystem['/'];
@@ -1880,17 +2508,17 @@ class WebOSApp {
     createFolder(windowId) {
         const name = prompt('Nome della cartella:');
         if (!name) return;
-        const pathInput = document.getElementById(`path-${windowId}`);
-        const currentPath = pathInput ? pathInput.value : '/';
+        const currentPath = this.state.fmCurrentPath[windowId] || '/';
         const folder = this.getFolderByPath(currentPath);
         if (folder && folder.children) {
             if (folder.children[name]) {
-                alert('Esiste già un file o cartella con questo nome!');
+                this.showToast('Errore', 'Esiste già un file o cartella con questo nome!', 'error');
                 return;
             }
-            folder.children[name] = { type: 'folder', name, children: {} };
+            folder.children[name] = { type: 'folder', name, children: {}, modifiedAt: Date.now() };
             this.saveFilesystem();
             this.renderFileList(windowId, currentPath);
+            this.showToast('Cartella creata', `Cartella "${name}" creata con successo.`, 'success');
             this.showTutorMessage(`Perfetto! Ho creato la cartella "${name}". È come una scatola vuota dove puoi mettere i tuoi file!`);
         }
     }
@@ -1898,28 +2526,30 @@ class WebOSApp {
     createFile(windowId) {
         const name = prompt('Nome del file:');
         if (!name) return;
-        const pathInput = document.getElementById(`path-${windowId}`);
-        const currentPath = pathInput ? pathInput.value : '/';
+        const currentPath = this.state.fmCurrentPath[windowId] || '/';
         const folder = this.getFolderByPath(currentPath);
         if (folder && folder.children) {
             if (folder.children[name]) {
-                alert('Esiste già un file o cartella con questo nome!');
+                this.showToast('Errore', 'Esiste già un file o cartella con questo nome!', 'error');
                 return;
             }
-            folder.children[name] = { type: 'file', name, content: '' };
+            folder.children[name] = { type: 'file', name, content: '', modifiedAt: Date.now() };
             this.saveFilesystem();
             this.renderFileList(windowId, currentPath);
+            this.showToast('File creato', `File "${name}" creato con successo.`, 'success');
             this.showTutorMessage(`Ho creato il file "${name}". È come un foglio bianco dove puoi scrivere!`);
         }
     }
 
     goUp(windowId) {
-        const pathInput = document.getElementById(`path-${windowId}`);
-        const currentPath = pathInput ? pathInput.value : '/';
+        const currentPath = this.state.fmCurrentPath[windowId] || '/';
         if (currentPath === '/') return;
         const parts = currentPath.split('/').filter(p => p);
         parts.pop();
         const parentPath = parts.length === 0 ? '/' : '/' + parts.join('/');
+        this.state.fmSearchQuery = '';
+        const searchInput = document.getElementById(`fm-search-${windowId}`);
+        if (searchInput) searchInput.value = '';
         this.renderFileList(windowId, parentPath);
     }
 
@@ -1927,18 +2557,7 @@ class WebOSApp {
         const folder = this.getFolderByPath(path);
         if (!folder || !folder.children[filename]) return;
         const file = folder.children[filename];
-        const content = file.content || '(file vuoto)';
-        const container = document.getElementById(`filelist-${windowId}`);
-        container.innerHTML = `
-            <div style="padding: 20px; background: white; border-radius: 8px;">
-                <h3 style="color: #667eea; margin-bottom: 10px;">📄 ${filename}</h3>
-                <pre style="background: #f7fafc; padding: 15px; border-radius: 6px; white-space: pre-wrap; font-family: monospace; margin-bottom: 15px;">${content}</pre>
-                <div style="display: flex; gap: 10px;">
-                    <button class="file-manager-btn" onclick="app.editFile('${windowId}', '${path}', '${filename}')">✏️ Modifica</button>
-                    <button class="file-manager-btn" onclick="app.renderFileList('${windowId}', '${path}')">← Torna alla cartella</button>
-                </div>
-            </div>
-        `;
+        this.updatePreviewPane(windowId, path, filename);
     }
 
     editFile(windowId, path, filename) {
@@ -1948,9 +2567,11 @@ class WebOSApp {
         const newContent = prompt('Modifica il contenuto:', file.content || '');
         if (newContent !== null) {
             file.content = newContent;
+            file.modifiedAt = Date.now();
             this.saveFilesystem();
+            this.showToast('Salvato', 'Modifiche salvate con successo.', 'success');
             this.showTutorMessage('Ho salvato le modifiche!');
-            this.renderFileList(windowId, path);
+            this.updatePreviewPane(windowId, path, filename);
         }
     }
 
@@ -2340,6 +2961,8 @@ class WebOSApp {
         this.state.wallpaper = wallpaper;
         localStorage.setItem('webos_wallpaper', wallpaper);
         this.applySettings();
+        this.showToast('Sfondo cambiato', `Nuovo sfondo: "${wallpaper}".`, 'success');
+        this.addNotification('Sfondo', `Sfondo cambiato in "${wallpaper}".`, 'info');
         this.showTutorMessage(`Ho cambiato lo sfondo! Ora hai lo sfondo "${wallpaper}". Ti piace?`);
     }
 
@@ -2353,10 +2976,13 @@ class WebOSApp {
         this.state.userMode = mode;
         localStorage.setItem('webos_mode', mode);
         this.applySettings();
+        this.showToast('Modalità cambiata', `Modalità: "${mode}".`, 'success');
+        this.addNotification('Modalità', `Modalità cambiata in "${mode}".`, 'info');
         this.showTutorMessage(`Modalità cambiata in "${mode}". Ora il sistema si adatta alle tue necessità!`);
     }
 
     toggleTutorSuggestions(enabled) {
+        this.showToast('Suggerimenti', enabled ? 'Suggerimenti del tutor attivati!' : 'Suggerimenti del tutor disattivati.', 'info', 2000);
         this.showTutorMessage(enabled ? 'Suggerimenti del tutor attivati!' : 'Suggerimenti del tutor disattivati.');
     }
 
@@ -2364,6 +2990,8 @@ class WebOSApp {
         if (confirm('Sei sicuro? Tutti i file e le cartelle verranno cancellati.')) {
             localStorage.removeItem('webos_filesystem');
             this.initFilesystem();
+            this.showToast('Ripristino', 'File ripristinati ai valori predefiniti.', 'success');
+            this.addNotification('File ripristinati', 'Il filesystem è stato ripristinato ai valori predefiniti.', 'info');
             this.showTutorMessage('Ho ripristinato i file predefiniti.');
         }
     }
@@ -2827,7 +3455,7 @@ class WebOSApp {
     // ===== Tutor Helper Methods =====
     getTutorWelcomeMessage(appId) {
         const messages = {
-            'file-manager': 'Benvenuto nel File Manager! Qui puoi organizzare i tuoi file in cartelle, come un vero armadio digitale!',
+            'file-manager': 'Benvenuto nel File Manager! Qui puoi organizzare i tuoi file in cartelle, trascinarli, copiarli e cercarli. C\'è anche il Cestino per ripristinare i file eliminati!',
             'browser': 'Ecco il Browser! Da qui puoi esplorare pagine sicure per imparare cos\'è Internet. Tutto è controllato e sicuro!',
             'tutor': 'Sono il tuo Tutor AI! Chiedimi qualsiasi cosa. Cosa vuoi sapere?',
             'settings': 'Nelle Impostazioni puoi personalizzare il computer: cambia lo sfondo, la dimensione delle icone e la modalità!',
@@ -2836,7 +3464,7 @@ class WebOSApp {
             'calculator': 'Ecco la Calcolatrice! Puoi fare addizioni, sottrazioni, moltiplicazioni, divisioni, percentuali, radici quadrate e cambiare il segno. Provaci!',
             'notepad': 'Ecco il Blocco Note! Scrivi appunti, annotazioni o quello che vuoi. Si salva automaticamente!',
             'terminal': 'Benvenuto nel Terminale! Qui puoi usare la riga di comando come un vero hacker. Prova i comandi: ls, cd, mkdir, neofetch e molti altri! Digita "help" per la lista completa.',
-            'task-manager': 'Ecco il Task Manager! Qui puoi vedere tutte le app aperte, quanto usano di memoria e CPU, e anche chiudere quelle che non servono più. Si aggiorna automaticamente ogni 2 secondi!',
+            'task-manager': 'Ecco il Task Manager! Qui puoi vedere tutte le app aperte, quanto usano di memoria e CPU, e anche chiudere le app che non servono più. Si aggiorna automaticamente ogni 2 secondi!',
         };
         return messages[appId] || 'Benvenuto!';
     }
@@ -2852,64 +3480,306 @@ class WebOSApp {
         });
         this.state.openWindows = [];
         this.updateTaskbarApps();
+        this.showToast('Spegnimento', 'Il sistema si sta spegnendo.', 'info');
+        this.addNotification('Spegnimento', 'Il sistema si sta spegnendo.', 'info');
     }
 
     wakeUp() {
         const shutdownScreen = document.getElementById('shutdown-screen');
         shutdownScreen.classList.add('hidden');
+        this.showToast('Riaccensione', 'Bentornato nel WebOS Educativo!', 'success');
+        this.addNotification('Riaccensione', 'Bentornato nel WebOS Educativo!', 'success');
         this.showTutorMessage('Bentornato! Sei di nuovo nel tuo computer virtuale.');
     }
 
-    // ===== Global Methods =====
-    selectProfile(profile) {
-        this.state.profile = profile;
-        this.state.userMode = profile;
-        localStorage.setItem('webos_profile', profile);
-        localStorage.setItem('webos_mode', profile);
-        const bootScreen = document.getElementById('boot-screen');
-        bootScreen.classList.add('fade-out');
-        setTimeout(() => {
-            bootScreen.classList.add('hidden');
-            this.boot();
-        }, 800);
+    // ===== Notification System =====
+    showToast(title, message, type = 'info', duration = 4000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌' };
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+            <div class="toast-body">
+                <div class="toast-title">${title}</div>
+                ${message ? `<div class="toast-message">${message}</div>` : ''}
+            </div>
+            <button class="toast-close" onclick="app.dismissToast(this.parentElement)">✕</button>
+        `;
+        container.appendChild(toast);
+        const dismissTimeout = setTimeout(() => this.dismissToast(toast), duration);
+        toast.dataset.dismissTimeout = dismissTimeout;
+        this.addNotification(title, message, type);
     }
 
-    toggleStartMenu(forceState = null) {
-        const menu = document.getElementById('start-menu');
-        if (forceState !== null) {
-            this.state.startMenuOpen = forceState;
+    dismissToast(toast) {
+        if (!toast || toast.classList.contains('toast-out')) return;
+        clearTimeout(toast.dataset.dismissTimeout);
+        toast.classList.add('toast-out');
+        setTimeout(() => toast.remove(), 300);
+    }
+
+    addNotification(title, message, type = 'info') {
+        const notif = {
+            id: Date.now() + Math.random(),
+            title,
+            message,
+            type,
+            time: new Date().toISOString(),
+            read: false
+        };
+        this.state.notifications.unshift(notif);
+        if (this.state.notifications.length > 20) this.state.notifications.pop();
+        this.saveNotifications();
+        this.updateNotificationBadge();
+    }
+
+    saveNotifications() {
+        try {
+            localStorage.setItem('webos_notifications', JSON.stringify(this.state.notifications));
+        } catch (e) { }
+    }
+
+    saveTrash() {
+        try {
+            localStorage.setItem('webos_trash', JSON.stringify(this.state.trash));
+        } catch (e) { }
+    }
+
+    saveRecentApps() {
+        try {
+            localStorage.setItem('webos_recent_apps', JSON.stringify(this.state.recentApps));
+        } catch (e) { }
+    }
+
+    saveRecentFiles() {
+        try {
+            localStorage.setItem('webos_recent_files', JSON.stringify(this.state.recentFiles));
+        } catch (e) { }
+    }
+
+    updateNotificationBadge() {
+        const badge = document.getElementById('notification-badge');
+        if (!badge) return;
+        const unread = this.state.notifications.filter(n => !n.read).length;
+        badge.textContent = unread;
+        if (unread > 0) {
+            badge.classList.remove('hidden');
         } else {
-            this.state.startMenuOpen = !this.state.startMenuOpen;
-        }
-        if (this.state.startMenuOpen) menu.classList.remove('hidden');
-        else menu.classList.add('hidden');
-    }
-
-    showTutorMessage(message) {
-        const bubble = document.getElementById('tutor-bubble');
-        const content = document.getElementById('tutor-bubble-content');
-        if (bubble && content) {
-            content.textContent = message;
-            bubble.classList.remove('hidden');
-            clearTimeout(this.tutorTimeout);
-            this.tutorTimeout = setTimeout(() => { this.hideTutorBubble(); }, 8000);
+            badge.classList.add('hidden');
         }
     }
 
-    hideTutorBubble() {
-        const bubble = document.getElementById('tutor-bubble');
-        if (bubble) bubble.classList.add('hidden');
-    }
-
-    toggleVoice() {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance('Ciao! Sono il Tutor AI. Clicca sull\'app Tutor per chiedermi qualsiasi cosa!');
-            utterance.lang = 'it-IT';
-            utterance.rate = 0.9;
-            speechSynthesis.speak(utterance);
+    toggleNotificationCenter() {
+        if (this.state.notificationCenterOpen) {
+            this.closeNotificationCenter();
         } else {
-            alert('La sintesi vocale non è supportata dal tuo browser.');
+            this.openNotificationCenter();
         }
+    }
+
+    openNotificationCenter() {
+        this.state.notificationCenterOpen = true;
+        const center = document.getElementById('notification-center');
+        if (center) center.classList.add('visible');
+        this.state.notifications.forEach(n => n.read = true);
+        this.saveNotifications();
+        this.updateNotificationBadge();
+        this.renderNotificationList();
+    }
+
+    closeNotificationCenter() {
+        this.state.notificationCenterOpen = false;
+        const center = document.getElementById('notification-center');
+        if (center) center.classList.remove('visible');
+    }
+
+    renderNotificationList() {
+        const list = document.getElementById('notification-list');
+        if (!list) return;
+        if (this.state.notifications.length === 0) {
+            list.innerHTML = '<div class="notification-empty">Nessuna notifica</div>';
+            return;
+        }
+        const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌' };
+        list.innerHTML = this.state.notifications.map(n => {
+            const time = new Date(n.time);
+            const timeStr = time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            return `
+                <div class="notification-item ${n.read ? '' : 'unread'}">
+                    <span class="notification-item-icon">${icons[n.type] || 'ℹ️'}</span>
+                    <div class="notification-item-body">
+                        <div class="notification-item-title">${n.title}</div>
+                        ${n.message ? `<div class="notification-item-text">${n.message}</div>` : ''}
+                        <div class="notification-item-time">${timeStr}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    clearAllNotifications() {
+        this.state.notifications = [];
+        this.saveNotifications();
+        this.updateNotificationBadge();
+        this.renderNotificationList();
+        this.showToast('Notifiche cancellate', 'Tutte le notifiche sono state eliminate.', 'info');
+    }
+
+    // ===== Global Launcher =====
+    openLauncher() {
+        this.state.launcherOpen = true;
+        this.state.launcherSelectedIndex = -1;
+        const overlay = document.getElementById('launcher-overlay');
+        if (overlay) overlay.classList.add('visible');
+        const input = document.getElementById('launcher-input');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        this.renderLauncherResults('');
+        this.addToRecentApps('launcher');
+    }
+
+    closeLauncher() {
+        this.state.launcherOpen = false;
+        this.state.launcherSelectedIndex = -1;
+        const overlay = document.getElementById('launcher-overlay');
+        if (overlay) overlay.classList.remove('visible');
+    }
+
+    setLauncherCategory(cat) {
+        this.state.launcherCategory = cat;
+        document.querySelectorAll('.launcher-category-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.cat === cat);
+        });
+        const input = document.getElementById('launcher-input');
+        if (input) this.renderLauncherResults(input.value);
+    }
+
+    handleLauncherInput(value) {
+        this.renderLauncherResults(value);
+    }
+
+    handleLauncherKeydown(e) {
+        const results = document.querySelectorAll('.launcher-result-item');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.state.launcherSelectedIndex = Math.min(this.state.launcherSelectedIndex + 1, results.length - 1);
+            this.updateLauncherSelection(results);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.state.launcherSelectedIndex = Math.max(this.state.launcherSelectedIndex - 1, -1);
+            this.updateLauncherSelection(results);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.state.launcherSelectedIndex >= 0 && results[this.state.launcherSelectedIndex]) {
+                results[this.state.launcherSelectedIndex].click();
+            }
+        } else if (e.key === 'Escape') {
+            this.closeLauncher();
+        }
+    }
+
+    updateLauncherSelection(results) {
+        results.forEach((r, i) => r.classList.toggle('selected', i === this.state.launcherSelectedIndex));
+        if (this.state.launcherSelectedIndex >= 0 && results[this.state.launcherSelectedIndex]) {
+            results[this.state.launcherSelectedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    renderLauncherResults(query) {
+        const container = document.getElementById('launcher-results');
+        if (!container) return;
+        const cat = this.state.launcherCategory;
+        const q = query.toLowerCase().trim();
+        let results = [];
+
+        if (cat === 'all' || cat === 'apps') {
+            this.desktopApps.forEach(app => {
+                if (!q || app.name.toLowerCase().includes(q) || app.id.toLowerCase().includes(q)) {
+                    results.push({ type: 'app', icon: app.icon, name: app.name, meta: 'Applicazione', action: () => { this.openApp(app.id); this.closeLauncher(); } });
+                }
+            });
+        }
+
+        if (cat === 'all' || cat === 'files') {
+            const searchFiles = (node, path) => {
+                if (!node || !node.children) return;
+                Object.entries(node.children).forEach(([name, item]) => {
+                    if (item.isTrash) return;
+                    const currentPath = path === '/' ? `/${name}` : `${path}/${name}`;
+                    if (item.type === 'folder') {
+                        if (!q || name.toLowerCase().includes(q)) {
+                            results.push({ type: 'folder', icon: '📁', name, meta: `Cartella · ${currentPath}`, action: () => { this.openApp('file-manager'); this.closeLauncher(); } });
+                        }
+                        searchFiles(item, currentPath);
+                    } else {
+                        if (!q || name.toLowerCase().includes(q)) {
+                            const ext = this.getFileExtension(name);
+                            const icon = this.getFileTypeIcon(ext);
+                            results.push({ type: 'file', icon, name, meta: `File · ${currentPath}`, action: () => { this.openApp('file-manager'); this.closeLauncher(); } });
+                        }
+                    }
+                });
+            };
+            searchFiles(this.state.filesystem['/'], '/');
+        }
+
+        if (cat === 'all' || cat === 'settings') {
+            const settingsItems = [
+                { icon: '🎨', name: 'Sfondo', meta: 'Cambia lo sfondo del desktop', action: () => { this.openApp('settings'); this.closeLauncher(); } },
+                { icon: '🔔', name: 'Suggerimenti Tutor', meta: 'Attiva o disattiva i suggerimenti', action: () => { this.openApp('settings'); this.closeLauncher(); } },
+                { icon: '🔊', name: 'Effetti sonori', meta: 'Attiva o disattiva i suoni', action: () => { this.openApp('settings'); this.closeLauncher(); } },
+                { icon: '👤', name: 'Modalità utente', meta: 'Bambino, Adulto, Anziano', action: () => { this.openApp('settings'); this.closeLauncher(); } },
+            ];
+            settingsItems.forEach(s => {
+                if (!q || s.name.toLowerCase().includes(q)) {
+                    results.push({ type: 'setting', icon: s.icon, name: s.name, meta: s.meta, action: s.action });
+                }
+            });
+        }
+
+        if (results.length === 0) {
+            container.innerHTML = '<div class="launcher-empty">Nessun risultato trovato</div>';
+            return;
+        }
+
+        container.innerHTML = results.slice(0, 15).map((r, i) => `
+            <div class="launcher-result-item" data-index="${i}" onclick="app.launcherSelectResult(${i})">
+                <span class="launcher-result-icon">${r.icon}</span>
+                <div class="launcher-result-info">
+                    <div class="launcher-result-name">${r.name}</div>
+                    <div class="launcher-result-meta">${r.meta}</div>
+                </div>
+            </div>
+        `).join('');
+
+        this._launcherResults = results;
+        this.state.launcherSelectedIndex = -1;
+    }
+
+    launcherSelectResult(index) {
+        if (this._launcherResults && this._launcherResults[index]) {
+            this._launcherResults[index].action();
+        }
+    }
+
+    addToRecentApps(appId) {
+        const appConfig = this.desktopApps.find(a => a.id === appId);
+        if (!appConfig) return;
+        this.state.recentApps = this.state.recentApps.filter(a => a.id !== appId);
+        this.state.recentApps.unshift({ id: appId, name: appConfig.name, icon: appConfig.icon, time: Date.now() });
+        if (this.state.recentApps.length > 10) this.state.recentApps.pop();
+        this.saveRecentApps();
+    }
+
+    addToRecentFiles(path, name) {
+        this.state.recentFiles = this.state.recentFiles.filter(f => !(f.path === path && f.name === name));
+        this.state.recentFiles.unshift({ path, name, time: Date.now() });
+        if (this.state.recentFiles.length > 10) this.state.recentFiles.pop();
+        this.saveRecentFiles();
     }
 }
 
