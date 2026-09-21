@@ -19,7 +19,9 @@ class AuraOSApp {
             clipboard: { type: null, items: [] },
             fmSelectedItems: [],
             trash: [],
+            doNotDisturb: false,
             notifications: [],
+            widgets: [],
             launcherOpen: false,
             launcherSelectedIndex: -1,
             launcherCategory: 'all',
@@ -78,6 +80,22 @@ class AuraOSApp {
             { id: 'calculator', name: 'Calcolatrice', icon: '🧮', description: 'Fai calcoli veloci' },
             { id: 'gallery', name: 'Galleria', icon: '🖼️', description: 'Guarda le tue immagini' },
             { id: 'music', name: 'Musica', icon: '🎵', description: 'Ascolta la tua musica' },
+            { id: 'app-store', name: 'App Store', icon: '🛒', description: 'Scarica nuove app' },
+            { id: 'text-editor', name: 'Editor di Testo', icon: '📄', description: 'Editor avanzato con syntax highlighting' },
+            { id: 'image-viewer', name: 'Visualizzatore Immagini', icon: '🖼️', description: 'Visualizza e modifica immagini' },
+            { id: 'video-player', name: 'Video Player', icon: '🎬', description: 'Riproduci video' },
+            { id: 'pdf-viewer', name: 'PDF Viewer', icon: '📕', description: 'Visualizza file PDF' },
+            { id: 'archive-manager', name: 'Gestore Archivi', icon: '🗜️', description: 'Comprimi e decomprimi file' },
+            { id: 'system-monitor', name: 'Monitor di Sistema', icon: '📈', description: 'Monitora CPU, RAM, disco' },
+            { id: 'disk-usage', name: 'Utilizzo Disco', icon: '💾', description: 'Analizza lo spazio disco' },
+            { id: 'font-viewer', name: 'Visualizzatore Font', icon: '🔤', description: 'Esplora i font installati' },
+            { id: 'screenshot', name: 'Screenshot', icon: '📸', description: 'Cattura schermate' },
+            { id: 'screen-recorder', name: 'Registratore Schermo', icon: '🎥', description: 'Registra il desktop' },
+            { id: 'weather-app', name: 'Meteo', icon: '🌤️', description: 'Previsioni meteo dettagliate' },
+            { id: 'calendar', name: 'Calendario', icon: '📅', description: 'Gestisci eventi e appuntamenti' },
+            { id: 'contacts', name: 'Contatti', icon: '👥', description: 'Gestisci i tuoi contatti' },
+            { id: 'notes-app', name: 'Note', icon: '📓', description: 'Note avanzate con markdown' },
+            { id: 'tasks', name: 'Attività', icon: '✅', description: 'Gestisci i tuoi task' },
         ];
 
         this.wallpapers = {
@@ -101,6 +119,7 @@ class AuraOSApp {
         this.initRealFilesystem();
         this.initSoundEngine();
         this.setupEventListeners();
+        this.loadWorkspaceConfig();
         this.updateClock();
         setInterval(() => this.updateClock(), 1000);
         this.updateNotificationBadge();
@@ -322,12 +341,33 @@ class AuraOSApp {
                 this.toggleStartMenu(false);
                 this.hideTutorBubble();
                 this.hideContextMenu();
+                this.hideWorkspaceContextMenu();
                 this.closeLauncher();
                 this.closeNotificationCenter();
             }
             if (e.key === 'F10' && e.ctrlKey) {
                 e.preventDefault();
                 this.minimizeAllWindows();
+            }
+            if (e.ctrlKey && e.altKey) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    const prev = this.state.currentWorkspace > 1 ? this.state.currentWorkspace - 1 : this.state.workspaces.length;
+                    this.switchWorkspaceFromOverview(prev);
+                }
+                if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    const next = this.state.currentWorkspace < this.state.workspaces.length ? this.state.currentWorkspace + 1 : 1;
+                    this.switchWorkspaceFromOverview(next);
+                }
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    this.toggleActivities(true);
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    this.toggleActivities(false);
+                }
             }
             if (e.ctrlKey && e.key === ' ') {
                 e.preventDefault();
@@ -428,6 +468,9 @@ class AuraOSApp {
         this.initClockWidget();
         this.initQuickSettings();
         this.initDashboard();
+        this.initWidgets();
+        this.addWidgetStartMenuItems();
+        this.initInstalledApps();
         setTimeout(() => {
             this.showTutorMessage('Benvenuto in AuraOS! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare, oppure esplora il desktop.');
         }, 1000);
@@ -504,6 +547,39 @@ class AuraOSApp {
             </div>
         `;
         document.body.appendChild(dashboard);
+    }
+
+    initInstalledApps() {
+        const preInstalled = [
+            'file-manager', 'notepad', 'terminal', 'browser', 'tutor', 'settings',
+            'guide', 'games', 'calculator', 'gallery', 'music', 'app-store',
+            'text-editor', 'image-viewer', 'video-player', 'pdf-viewer',
+            'archive-manager', 'system-monitor', 'disk-usage', 'font-viewer',
+            'screenshot', 'screen-recorder', 'weather-app', 'calendar',
+            'contacts', 'notes-app', 'tasks'
+        ];
+        const installed = this.getInstalledApps();
+        let changed = false;
+        preInstalled.forEach(appId => {
+            if (!installed.includes(appId)) {
+                installed.push(appId);
+                changed = true;
+            }
+        });
+        if (changed) {
+            this.saveInstalledApps(installed);
+        }
+        this.syncStartMenuWithInstalled();
+    }
+
+    syncStartMenuWithInstalled() {
+        const installed = this.getInstalledApps();
+        const container = document.getElementById('start-menu-items');
+        if (!container) return;
+        container.querySelectorAll('.start-menu-item[data-app-id]').forEach(btn => {
+            const appId = btn.dataset.appId;
+            btn.style.display = installed.includes(appId) ? '' : 'none';
+        });
     }
 
     toggleQuickSettings() {
@@ -596,7 +672,7 @@ class AuraOSApp {
         const widget = document.createElement('div');
         widget.id = 'weather-widget';
         widget.className = 'weather-widget';
-        const cached = localStorage.getItem('auraos_weather') || localStorage.getItem('webos_weather');
+        const cached = localStorage.getItem('auraos_weather');
         let weatherData;
         try {
             weatherData = cached ? JSON.parse(cached) : this.generateWeatherData();
@@ -772,6 +848,7 @@ class AuraOSApp {
         if (!windowData) return;
         if (windowData.maximized) return;
         if (Math.abs(rect.left) < edgeThreshold && rect.width > 300) {
+            win.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             win.style.left = '0px';
             win.style.top = '32px';
             win.style.width = window.innerWidth / 2 + 'px';
@@ -780,9 +857,11 @@ class AuraOSApp {
             this.state.currentSnapWindow = windowId;
             this.state.snapState = 'left';
             this.playSound('success');
+            setTimeout(() => { win.style.transition = ''; }, 300);
             return;
         }
         if (Math.abs(rect.right - window.innerWidth) < edgeThreshold && rect.width > 300) {
+            win.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             win.style.left = (window.innerWidth / 2) + 'px';
             win.style.top = '32px';
             win.style.width = window.innerWidth / 2 + 'px';
@@ -791,9 +870,11 @@ class AuraOSApp {
             this.state.currentSnapWindow = windowId;
             this.state.snapState = 'right';
             this.playSound('success');
+            setTimeout(() => { win.style.transition = ''; }, 300);
             return;
         }
         if (rect.top < snapThreshold && !windowData.maximized) {
+            win.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             win.style.left = '0px';
             win.style.top = '32px';
             win.style.width = window.innerWidth + 'px';
@@ -808,6 +889,7 @@ class AuraOSApp {
             this.state.currentSnapWindow = windowId;
             this.state.snapState = 'maximized';
             this.playSound('success');
+            setTimeout(() => { win.style.transition = ''; }, 300);
         }
     }
 
@@ -820,6 +902,7 @@ class AuraOSApp {
                 win.classList.remove('maximized');
                 windowData.maximized = false;
             }
+            win.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             win.style.left = windowData.prevX || '50px';
             win.style.top = windowData.prevY || '50px';
             win.style.width = windowData.prevWidth || '600px';
@@ -829,8 +912,10 @@ class AuraOSApp {
             windowData.y = parseInt(windowData.prevY || '50');
             windowData.width = parseInt(windowData.prevWidth || '600');
             windowData.height = parseInt(windowData.prevHeight || '450');
+            setTimeout(() => { win.style.transition = ''; }, 300);
         }
         if (this.state.snapState === 'maximized' && windowData) {
+            win.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             win.style.left = windowData.prevX || '50px';
             win.style.top = windowData.prevY || '50px';
             win.style.width = windowData.prevWidth || '600px';
@@ -842,6 +927,7 @@ class AuraOSApp {
             windowData.y = parseInt(windowData.prevY || '50');
             windowData.width = parseInt(windowData.prevWidth || '600');
             windowData.height = parseInt(windowData.prevHeight || '450');
+            setTimeout(() => { win.style.transition = ''; }, 300);
         }
         this.state.currentSnapWindow = null;
         this.state.snapState = null;
@@ -863,7 +949,7 @@ class AuraOSApp {
     // ===== Sound Engine =====
     initSoundEngine() {
         this.audioContext = null;
-        this.state.soundsEnabled = (localStorage.getItem('auraos_sounds') || localStorage.getItem('webos_sounds')) !== 'false';
+        this.state.soundsEnabled = (localStorage.getItem('auraos_sounds')) !== 'false';
     }
 
     getAudioContext() {
@@ -1012,16 +1098,19 @@ class AuraOSApp {
             icon: appConfig.icon,
             x: 50 + (this.state.openWindows.length * 30),
             y: 50 + (this.state.openWindows.length * 30),
-            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : appId === 'terminal' ? 700 : appId === 'task-manager' ? 600 : appId === 'gallery' ? 700 : appId === 'music' ? 750 : 600,
-            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : appId === 'terminal' ? 450 : appId === 'task-manager' ? 500 : appId === 'gallery' ? 500 : appId === 'music' ? 500 : 450,
+            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : appId === 'terminal' ? 700 : appId === 'task-manager' ? 600 : appId === 'gallery' ? 700 : appId === 'music' ? 750 : appId === 'app-store' ? 800 : 600,
+            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : appId === 'terminal' ? 450 : appId === 'task-manager' ? 500 : appId === 'gallery' ? 500 : appId === 'music' ? 500 : appId === 'app-store' ? 600 : 450,
             minimized: false,
             maximized: false,
+            workspaceId: this.state.currentWorkspace,
             prevX: null,
             prevY: null,
             prevWidth: null,
             prevHeight: null,
         };
         this.state.openWindows.push(windowData);
+        const ws = this.state.workspaces.find(w => w.id === this.state.currentWorkspace);
+        if (ws && !ws.windows.includes(windowId)) ws.windows.push(windowId);
         this.renderWindow(windowData);
         this.updateDock();
         this.updateTopBar();
@@ -1091,18 +1180,25 @@ class AuraOSApp {
                 return this.getGalleryContent(windowId);
             case 'music':
                 return this.getMusicContent(windowId);
+            case 'app-store':
+                return this.getAppStoreContent(windowId);
             default:
                 return '<p>App in caricamento...</p>';
         }
     }
 
     focusWindow(windowId) {
-        document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+        document.querySelectorAll('.window').forEach(w => {
+            w.classList.remove('active');
+            w.style.boxShadow = '';
+        });
         const win = document.getElementById(windowId);
         if (win) {
             win.classList.add('active');
             win.style.zIndex = ++this.state.windowZIndex;
             this.state.activeWindow = windowId;
+            win.style.animation = 'windowFocus 0.3s ease';
+            setTimeout(() => { win.style.animation = ''; }, 300);
             this.updateDock();
             this.updateTopBar();
         }
@@ -1112,12 +1208,16 @@ class AuraOSApp {
         this.playSound('close');
         const win = document.getElementById(windowId);
         if (win) {
-            win.classList.add('minimized');
-            const windowData = this.state.openWindows.find(w => w.id === windowId);
-            if (windowData) windowData.minimized = true;
-            this.state.activeWindow = null;
-            this.updateDock();
-            this.updateTopBar();
+            win.style.animation = 'windowMinimize 0.3s ease forwards';
+            setTimeout(() => {
+                win.classList.add('minimized');
+                win.style.animation = '';
+                const windowData = this.state.openWindows.find(w => w.id === windowId);
+                if (windowData) windowData.minimized = true;
+                this.state.activeWindow = null;
+                this.updateDock();
+                this.updateTopBar();
+            }, 300);
         }
     }
 
@@ -1128,6 +1228,7 @@ class AuraOSApp {
         if (!windowData) return;
         windowData.maximized = !windowData.maximized;
         if (windowData.maximized) {
+            win.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             win.classList.add('maximized');
             windowData.prevX = win.style.left;
             windowData.prevY = win.style.top;
@@ -1138,13 +1239,18 @@ class AuraOSApp {
             win.style.width = '100%';
             win.style.height = `calc(100% - 32px)`;
             win.style.borderRadius = '0px';
+            win.style.animation = 'windowBounce 0.3s ease';
+            setTimeout(() => { win.style.animation = ''; }, 300);
         } else {
             win.classList.remove('maximized');
+            win.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             win.style.left = windowData.prevX || '50px';
             win.style.top = windowData.prevY || '50px';
             win.style.width = windowData.prevWidth || '600px';
             win.style.height = windowData.prevHeight || '450px';
             win.style.borderRadius = '10px';
+            win.style.animation = 'windowBounce 0.3s ease';
+            setTimeout(() => { win.style.animation = ''; }, 300);
         }
         this.state.currentSnapWindow = null;
         this.state.snapState = null;
@@ -1154,22 +1260,32 @@ class AuraOSApp {
         this.playSound('close');
         const win = document.getElementById(windowId);
         if (win) {
-            win.style.animation = 'windowClose 0.15s ease forwards';
+            win.style.animation = 'windowClose 0.2s ease forwards';
             setTimeout(() => {
                 win.remove();
                 this.state.openWindows = this.state.openWindows.filter(w => w.id !== windowId);
                 this.updateDock();
                 this.updateTopBar();
-            }, 150);
+            }, 200);
         }
         const winData = this.state.openWindows.find(w => w.id === windowId);
         if (winData) {
+            this.state.workspaces.forEach(ws => {
+                ws.windows = ws.windows.filter(id => id !== windowId);
+            });
             if (winData.appId === 'music' && this.musicAudio && this.musicAudio[windowId]) {
                 this.musicAudio[windowId].pause();
                 this.musicAudio[windowId].src = '';
             }
             if (winData.appId === 'gallery' && this.gallerySlideshow && this.gallerySlideshow[windowId]) {
                 this.stopGallerySlideshow(windowId);
+            }
+            if (winData.appId === 'terminal') {
+                this.saveTerminalState(windowId);
+                if (this._terminalCleanup && this._terminalCleanup[windowId]) {
+                    document.removeEventListener('keydown', this._terminalCleanup[windowId]);
+                    delete this._terminalCleanup[windowId];
+                }
             }
             this.showToast('Chiusa', `"${winData.title}" chiusa.`, 'info', 2000);
             this.addNotification('Finestra chiusa', `"${winData.title}" è stata chiusa.`, 'info');
@@ -1282,7 +1398,7 @@ class AuraOSApp {
     }
 
     initNotepad(windowId) {
-        const notes = localStorage.getItem('auraos_notes') || localStorage.getItem('webos_notes');
+        const notes = localStorage.getItem('auraos_notes');
         const textarea = document.getElementById(`notepad-textarea-${windowId}`);
         const statusEl = document.getElementById(`notepad-status-${windowId}`);
         const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
@@ -1329,6 +1445,7 @@ class AuraOSApp {
     getTerminalContent(windowId) {
         return `
             <div class="terminal-wrapper" id="terminal-wrapper-${windowId}">
+                <div class="terminal-tabs" id="terminal-tabs-${windowId}"></div>
                 <div class="terminal-header">
                     <span class="terminal-header-dot red"></span>
                     <span class="terminal-header-dot yellow"></span>
@@ -1338,8 +1455,9 @@ class AuraOSApp {
                 <div class="terminal-body" id="terminal-body-${windowId}">
                     <div class="terminal-output" id="terminal-output-${windowId}"></div>
                     <div class="terminal-input-line">
-                        <span class="terminal-prompt" id="terminal-prompt-${windowId}">utente@webos:~$&nbsp;</span>
+                        <span class="terminal-prompt" id="terminal-prompt-${windowId}">utente@auraos:~$&nbsp;</span>
                         <input type="text" class="terminal-input" id="terminal-input-${windowId}" autocomplete="off" spellcheck="false" autofocus>
+                        <div class="terminal-ai-dropdown" id="terminal-ai-dropdown-${windowId}"></div>
                     </div>
                 </div>
             </div>
@@ -1347,55 +1465,98 @@ class AuraOSApp {
     }
 
     initTerminal(windowId) {
+        this.initTerminalTabs(windowId);
+        
         const input = document.getElementById(`terminal-input-${windowId}`);
         const output = document.getElementById(`terminal-output-${windowId}`);
         const body = document.getElementById(`terminal-body-${windowId}`);
+        const dropdown = document.getElementById(`terminal-ai-dropdown-${windowId}`);
         if (!input || !output) return;
 
-        this.terminalState = this.terminalState || {};
-        this.terminalState[windowId] = {
-            cwd: '/',
-            history: [],
-            historyIndex: -1,
-        };
         const ts = this.terminalState[windowId];
+        const activeTab = ts ? ts.activeTab : null;
+        const tab = ts && activeTab ? ts.tabs[activeTab] : null;
+        
+        if (tab && !tab.outputHTML) {
+            const welcomeLines = [
+                { type: 'welcome', text: 'AuraOS - Terminale v1.0' },
+                { type: 'welcome', text: 'Digita "help" per vedere i comandi disponibili.' },
+                { type: 'welcome', text: 'Usa i tab per navigare | Ctrl+Shift+T nuova scheda | Ctrl+/ assistenza AI' },
+                { type: 'blank' },
+            ];
+            welcomeLines.forEach(l => this.terminalPrint(windowId, l.text, l.type));
+            tab.outputHTML = output.innerHTML;
+        } else if (tab) {
+            output.innerHTML = tab.outputHTML;
+        }
 
-        const welcomeLines = [
-            { type: 'welcome', text: 'AuraOS - Terminale v1.0' },
-            { type: 'welcome', text: 'Digita "help" per vedere i comandi disponibili.' },
-            { type: 'blank' },
-        ];
-        welcomeLines.forEach(l => this.terminalPrint(windowId, l.text, l.type));
+        const tabState = this.getActiveTab(windowId);
+        if (tabState) {
+            const prompt = document.getElementById(`terminal-prompt-${windowId}`);
+            if (prompt) {
+                const displayPath = tabState.cwd === '/' ? '~' : `~${tabState.cwd}`;
+                prompt.innerHTML = `utente@auraos:${displayPath}$&nbsp;`;
+            }
+        }
 
         input.addEventListener('keydown', (e) => {
+            const ct = this.getActiveTab(windowId);
+            if (!ct) return;
+            
             if (e.key === 'Enter') {
                 const cmd = input.value.trim();
                 input.value = '';
                 if (cmd) {
-                    ts.history.push(cmd);
-                    ts.historyIndex = ts.history.length;
-                    this.terminalPrint(windowId, `utente@auraos:${ts.cwd === '/' ? '~' : ts.cwd}$ ${cmd}`, 'command');
+                    ct.history.push(cmd);
+                    ct.historyIndex = ct.history.length;
+                    this.terminalPrint(windowId, `utente@auraos:${ct.cwd === '/' ? '~' : ct.cwd}$ ${cmd}`, 'command');
                 }
                 this.terminalExecute(windowId, cmd);
+                if (dropdown) {
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('visible');
+                }
                 input.focus();
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                if (ts.historyIndex > 0) {
-                    ts.historyIndex--;
-                    input.value = ts.history[ts.historyIndex];
+                if (ct.historyIndex > 0) {
+                    ct.historyIndex--;
+                    input.value = ct.history[ct.historyIndex];
                 }
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                if (ts.historyIndex < ts.history.length - 1) {
-                    ts.historyIndex++;
-                    input.value = ts.history[ts.historyIndex];
+                if (ct.historyIndex < ct.history.length - 1) {
+                    ct.historyIndex++;
+                    input.value = ct.history[ct.historyIndex];
                 } else {
-                    ts.historyIndex = ts.history.length;
+                    ct.historyIndex = ct.history.length;
                     input.value = '';
                 }
             } else if (e.key === 'Tab') {
                 e.preventDefault();
-                this.terminalTabComplete(windowId, input.value);
+                const val = input.value.trim();
+                if (val.startsWith('ai ') || val.startsWith('help ') || val.startsWith('?') || val === '?') {
+                    this.terminalAIAssist(windowId);
+                } else {
+                    this.terminalTabComplete(windowId, input.value);
+                }
+            } else if (e.key === 'Escape') {
+                if (dropdown) {
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('visible');
+                }
+            }
+        });
+
+        input.addEventListener('input', () => {
+            const val = input.value.trim();
+            if (val.startsWith('ai ') || val.startsWith('help ') || val.startsWith('?') || val === '?') {
+                this.terminalAIAssist(windowId);
+            } else {
+                if (dropdown) {
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('visible');
+                }
             }
         });
 
@@ -1412,6 +1573,32 @@ class AuraOSApp {
             }
         });
 
+        const onGlobalKey = (e) => {
+            const winData = this.state.openWindows.find(w => w.id === windowId);
+            if (!winData || this.state.activeWindow !== windowId) return;
+            
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'T' || e.key === 't')) {
+                e.preventDefault();
+                this.createNewTerminalTab(windowId);
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+                e.preventDefault();
+                const activeTab = this.getActiveTerminalTab(windowId);
+                if (activeTab) this.closeTerminalTab(windowId, activeTab);
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+                e.preventDefault();
+                this.cycleTerminalTab(windowId, e.shiftKey ? -1 : 1);
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                e.preventDefault();
+                this.toggleAIAssist(windowId);
+            }
+        };
+        document.addEventListener('keydown', onGlobalKey);
+        this._terminalCleanup = this._terminalCleanup || {};
+        this._terminalCleanup[windowId] = onGlobalKey;
+
         input.focus();
     }
 
@@ -1427,8 +1614,17 @@ class AuraOSApp {
     }
 
     terminalExecute(windowId, cmdLine) {
-        const ts = this.terminalState[windowId];
+        const ct = this.getActiveTab(windowId);
+        if (!ct) return;
         if (!cmdLine) return;
+
+        if (cmdLine.startsWith('ai explain ')) {
+            const explanation = this.getAIExplanation(cmdLine.slice(11).trim());
+            this.terminalPrint(windowId, explanation, 'output');
+            this.syncTabOutput(windowId);
+            return;
+        }
+
         const parts = cmdLine.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
         const cmd = parts[0] ? parts[0].toLowerCase() : '';
         const args = parts.slice(1).map(a => a.replace(/^"|"$/g, ''));
@@ -1451,12 +1647,13 @@ class AuraOSApp {
                     ['neofetch', 'Mostra informazioni di sistema'],
                     ['rm <nome>', 'Elimina un file o cartella'],
                     ['history', 'Mostra la cronologia comandi'],
+                    ['ai explain <cmd>', 'Spiega un comando'],
                 ];
                 cmds.forEach(([c, d]) => this.terminalPrint(windowId, `  ${c.padEnd(20)} ${d}`, 'output'));
                 break;
 
             case 'ls': {
-                const folder = this.getFolderByPath(ts.cwd);
+                const folder = this.getFolderByPath(ct.cwd);
                 if (!folder || !folder.children || Object.keys(folder.children).length === 0) {
                     this.terminalPrint(windowId, '(cartella vuota)', 'output');
                 } else {
@@ -1469,25 +1666,25 @@ class AuraOSApp {
             }
             case 'cd': {
                 if (!args[0] || args[0] === '~') {
-                    ts.cwd = '/';
+                    ct.cwd = '/';
                 } else if (args[0] === '..') {
-                    if (ts.cwd !== '/') {
-                        const parts = ts.cwd.split('/').filter(Boolean);
+                    if (ct.cwd !== '/') {
+                        const parts = ct.cwd.split('/').filter(Boolean);
                         parts.pop();
-                        ts.cwd = parts.length === 0 ? '/' : '/' + parts.join('/');
+                        ct.cwd = parts.length === 0 ? '/' : '/' + parts.join('/');
                     }
                 } else if (args[0].startsWith('/')) {
                     const folder = this.getFolderByPath(args[0]);
                     if (folder && folder.type === 'folder') {
-                        ts.cwd = args[0];
+                        ct.cwd = args[0];
                     } else {
                         this.terminalPrint(windowId, `cd: ${args[0]}: Nessuna tale directory`, 'error');
                     }
                 } else {
-                    const newPath = ts.cwd === '/' ? `/${args[0]}` : `${ts.cwd}/${args[0]}`;
+                    const newPath = ct.cwd === '/' ? `/${args[0]}` : `${ct.cwd}/${args[0]}`;
                     const folder = this.getFolderByPath(newPath);
                     if (folder && folder.type === 'folder') {
-                        ts.cwd = newPath;
+                        ct.cwd = newPath;
                     } else {
                         this.terminalPrint(windowId, `cd: ${args[0]}: Nessuna tale directory`, 'error');
                     }
@@ -1496,7 +1693,7 @@ class AuraOSApp {
                 break;
             }
             case 'pwd':
-                this.terminalPrint(windowId, ts.cwd, 'output');
+                this.terminalPrint(windowId, ct.cwd, 'output');
                 break;
 
             case 'mkdir': {
@@ -1504,7 +1701,7 @@ class AuraOSApp {
                     this.terminalPrint(windowId, 'mkdir: manca il nome della cartella', 'error');
                     break;
                 }
-                const folder = this.getFolderByPath(ts.cwd);
+                const folder = this.getFolderByPath(ct.cwd);
                 if (folder && folder.children) {
                     if (folder.children[args[0]]) {
                         this.terminalPrint(windowId, `mkdir: impossibile creare "${args[0]}": File esistente`, 'error');
@@ -1521,7 +1718,7 @@ class AuraOSApp {
                     this.terminalPrint(windowId, 'touch: manca il nome del file', 'error');
                     break;
                 }
-                const folder = this.getFolderByPath(ts.cwd);
+                const folder = this.getFolderByPath(ct.cwd);
                 if (folder && folder.children) {
                     if (!folder.children[args[0]]) {
                         folder.children[args[0]] = { type: 'file', name: args[0], content: '' };
@@ -1535,7 +1732,7 @@ class AuraOSApp {
                     this.terminalPrint(windowId, 'cat: manca il nome del file', 'error');
                     break;
                 }
-                const fPath = args[0].startsWith('/') ? args[0] : ts.cwd === '/' ? `/${args[0]}` : `${ts.cwd}/${args[0]}`;
+                const fPath = args[0].startsWith('/') ? args[0] : ct.cwd === '/' ? `/${args[0]}` : `${ct.cwd}/${args[0]}`;
                 const fileFolder = this.getFolderByPath(fPath.substring(0, fPath.lastIndexOf('/')) || '/');
                 const fileName = fPath.substring(fPath.lastIndexOf('/') + 1);
                 if (fileFolder && fileFolder.children && fileFolder.children[fileName]) {
@@ -1576,7 +1773,7 @@ class AuraOSApp {
                     this.terminalPrint(windowId, 'rm: manca l\'operando', 'error');
                     break;
                 }
-                const targetFolder = this.getFolderByPath(ts.cwd);
+                const targetFolder = this.getFolderByPath(ct.cwd);
                 if (targetFolder && targetFolder.children && targetFolder.children[args[0]]) {
                     delete targetFolder.children[args[0]];
                     this.saveFilesystem();
@@ -1587,32 +1784,33 @@ class AuraOSApp {
                 break;
             }
             case 'history':
-                ts.history.forEach((h, i) => this.terminalPrint(windowId, `  ${(i + 1).toString().padStart(4)}  ${h}`, 'output'));
+                ct.history.forEach((h, i) => this.terminalPrint(windowId, `  ${(i + 1).toString().padStart(4)}  ${h}`, 'output'));
                 break;
 
             default:
                 this.terminalPrint(windowId, `bash: ${cmd}: comando non trovato`, 'error');
         }
+        this.syncTabOutput(windowId);
     }
 
     terminalUpdatePrompt(windowId) {
-        const ts = this.terminalState[windowId];
-        if (!ts) return;
+        const ct = this.getActiveTab(windowId);
+        if (!ct) return;
         const prompt = document.getElementById(`terminal-prompt-${windowId}`);
         if (prompt) {
-            const displayPath = ts.cwd === '/' ? '~' : `~${ts.cwd}`;
+            const displayPath = ct.cwd === '/' ? '~' : `~${ct.cwd}`;
             prompt.innerHTML = `utente@auraos:${displayPath}$&nbsp;`;
         }
     }
 
     terminalTabComplete(windowId, currentInput) {
-        const ts = this.terminalState[windowId];
+        const ct = this.getActiveTab(windowId);
         const input = document.getElementById(`terminal-input-${windowId}`);
-        if (!input || !ts) return;
+        if (!input || !ct) return;
         const parts = currentInput.split(' ');
         const lastPart = parts[parts.length - 1];
         const isCommand = parts.length === 1;
-        const folder = this.getFolderByPath(ts.cwd);
+        const folder = this.getFolderByPath(ct.cwd);
 
         let matches = [];
         if (isCommand) {
@@ -1627,6 +1825,332 @@ class AuraOSApp {
         } else if (matches.length > 1) {
             this.terminalPrint(windowId, matches.join('  '), 'output');
         }
+    }
+
+    getActiveTab(windowId) {
+        const ts = this.terminalState[windowId];
+        if (!ts || !ts.activeTab) return null;
+        return ts.tabs[ts.activeTab] || null;
+    }
+
+    initTerminalTabs(windowId) {
+        this.terminalState = this.terminalState || {};
+        if (!this.terminalState[windowId]) {
+            this.loadTerminalState(windowId);
+        }
+        if (!this.terminalState[windowId]) {
+            this.terminalState[windowId] = {
+                activeTab: null,
+                tabs: {},
+            };
+        }
+        if (!this.terminalState[windowId].tabs) {
+            const old = this.terminalState[windowId];
+            const legacyId = 'tab-legacy-' + Date.now();
+            this.terminalState[windowId] = {
+                activeTab: legacyId,
+                tabs: {
+                    [legacyId]: {
+                        cwd: old.cwd || '/',
+                        history: old.history || [],
+                        historyIndex: old.historyIndex || -1,
+                        title: 'Terminale',
+                        outputHTML: '',
+                    },
+                },
+            };
+        }
+        const tabIds = Object.keys(this.terminalState[windowId].tabs);
+        if (tabIds.length === 0) {
+            this.createTerminalTab(windowId, 'tab-' + Date.now(), 'Terminale');
+        } else {
+            const activeTab = this.terminalState[windowId].activeTab || tabIds[0];
+            this.terminalState[windowId].activeTab = activeTab;
+            this.renderTerminalTabs(windowId);
+            this.restoreActiveTab(windowId);
+        }
+    }
+
+    createTerminalTab(windowId, tabId, title) {
+        if (!this.terminalState[windowId]) {
+            this.terminalState[windowId] = { activeTab: null, tabs: {} };
+        }
+        this.terminalState[windowId].tabs[tabId] = {
+            cwd: '/',
+            history: [],
+            historyIndex: -1,
+            title: title || 'Terminale',
+            outputHTML: '',
+        };
+        this.terminalState[windowId].activeTab = tabId;
+        this.renderTerminalTabs(windowId);
+        this.restoreActiveTab(windowId);
+        this.saveTerminalState(windowId);
+    }
+
+    createNewTerminalTab(windowId) {
+        const ts = this.terminalState[windowId];
+        const count = ts ? Object.keys(ts.tabs).length + 1 : 1;
+        const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+        this.createTerminalTab(windowId, tabId, `Terminale ${count}`);
+    }
+
+    switchTerminalTab(windowId, tabId) {
+        const ts = this.terminalState[windowId];
+        if (!ts || !ts.tabs[tabId] || ts.activeTab === tabId) return;
+        
+        this.syncTabOutput(windowId);
+        
+        ts.activeTab = tabId;
+        this.renderTerminalTabs(windowId);
+        this.restoreActiveTab(windowId);
+        this.saveTerminalState(windowId);
+        
+        const input = document.getElementById(`terminal-input-${windowId}`);
+        if (input) input.focus();
+    }
+
+    closeTerminalTab(windowId, tabId) {
+        const ts = this.terminalState[windowId];
+        if (!ts || !ts.tabs[tabId]) return;
+        
+        if (Object.keys(ts.tabs).length === 1) {
+            const tab = ts.tabs[tabId];
+            tab.cwd = '/';
+            tab.history = [];
+            tab.historyIndex = -1;
+            tab.outputHTML = '';
+            tab.title = 'Terminale';
+            ts.activeTab = tabId;
+            this.renderTerminalTabs(windowId);
+            this.restoreActiveTab(windowId);
+            this.saveTerminalState(windowId);
+            return;
+        }
+        
+        delete ts.tabs[tabId];
+        const remainingIds = Object.keys(ts.tabs);
+        if (ts.activeTab === tabId) {
+            ts.activeTab = remainingIds[0];
+            this.restoreActiveTab(windowId);
+        }
+        this.renderTerminalTabs(windowId);
+        this.saveTerminalState(windowId);
+    }
+
+    getActiveTerminalTab(windowId) {
+        const ts = this.terminalState[windowId];
+        return ts ? ts.activeTab : null;
+    }
+
+    cycleTerminalTab(windowId, direction) {
+        const ts = this.terminalState[windowId];
+        if (!ts || !ts.activeTab) return;
+        const tabIds = Object.keys(ts.tabs);
+        const currentIdx = tabIds.indexOf(ts.activeTab);
+        if (tabIds.length <= 1) return;
+        let nextIdx = currentIdx + direction;
+        if (nextIdx < 0) nextIdx = tabIds.length - 1;
+        if (nextIdx >= tabIds.length) nextIdx = 0;
+        this.switchTerminalTab(windowId, tabIds[nextIdx]);
+    }
+
+    renderTerminalTabs(windowId) {
+        const tabsContainer = document.getElementById(`terminal-tabs-${windowId}`);
+        if (!tabsContainer) return;
+        const ts = this.terminalState[windowId];
+        if (!ts) return;
+        
+        let html = '';
+        for (const [tabId, tab] of Object.entries(ts.tabs)) {
+            const isActive = tabId === ts.activeTab;
+            html += `
+                <div class="terminal-tab ${isActive ? 'active' : ''}" data-tab-id="${tabId}" onclick="app.switchTerminalTab('${windowId}', '${tabId}')">
+                    <span class="terminal-tab-title">${tab.title}</span>
+                    <button class="terminal-tab-close" onclick="event.stopPropagation(); app.closeTerminalTab('${windowId}', '${tabId}')" title="Chiudi scheda">×</button>
+                </div>
+            `;
+        }
+        html += `
+            <button class="terminal-tab-new" onclick="app.createNewTerminalTab('${windowId}')" title="Nuova scheda (Ctrl+Shift+T)">+</button>
+            <button class="terminal-ai-btn" id="terminal-ai-btn-${windowId}" onclick="app.toggleAIAssist('${windowId}')" title="Assistenza AI (Ctrl+/)">AI</button>
+        `;
+        tabsContainer.innerHTML = html;
+    }
+
+    restoreActiveTab(windowId) {
+        const ts = this.terminalState[windowId];
+        if (!ts) return;
+        const tab = ts.tabs[ts.activeTab];
+        if (!tab) return;
+        
+        const output = document.getElementById(`terminal-output-${windowId}`);
+        const prompt = document.getElementById(`terminal-prompt-${windowId}`);
+        
+        if (output) {
+            output.innerHTML = tab.outputHTML || '';
+        }
+        if (prompt) {
+            const displayPath = tab.cwd === '/' ? '~' : `~${tab.cwd}`;
+            prompt.innerHTML = `utente@auraos:${displayPath}$&nbsp;`;
+        }
+        
+        const body = document.getElementById(`terminal-body-${windowId}`);
+        if (body) body.scrollTop = body.scrollHeight;
+    }
+
+    syncTabOutput(windowId) {
+        const ts = this.terminalState[windowId];
+        if (!ts || !ts.activeTab) return;
+        const tab = ts.tabs[ts.activeTab];
+        if (!tab) return;
+        const output = document.getElementById(`terminal-output-${windowId}`);
+        if (output) {
+            tab.outputHTML = output.innerHTML;
+        }
+    }
+
+    saveTerminalState(windowId) {
+        try {
+            const ts = this.terminalState[windowId];
+            if (!ts) return;
+            this.syncTabOutput(windowId);
+            const key = `auraos_terminal_${windowId}`;
+            localStorage.setItem(key, JSON.stringify(ts));
+        } catch (e) {}
+    }
+
+    loadTerminalState(windowId) {
+        try {
+            const key = `auraos_terminal_${windowId}`;
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                this.terminalState[windowId] = JSON.parse(saved);
+                return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    terminalAIAssist(windowId) {
+        const input = document.getElementById(`terminal-input-${windowId}`);
+        const dropdown = document.getElementById(`terminal-ai-dropdown-${windowId}`);
+        if (!input || !dropdown) return;
+        
+        const val = input.value.trim();
+        if (!val) {
+            dropdown.innerHTML = '';
+            dropdown.classList.remove('visible');
+            return;
+        }
+        
+        const suggestions = this.getAISuggestions(windowId, val);
+        if (suggestions.length === 0) {
+            dropdown.innerHTML = '';
+            dropdown.classList.remove('visible');
+            return;
+        }
+        
+        dropdown.innerHTML = suggestions.map(s => 
+            `<div class="terminal-ai-suggestion" data-cmd="${s}" onclick="app.applyAISuggestion('${windowId}', '${s.replace(/'/g, "\\'")}')">${s}</div>`
+        ).join('');
+        dropdown.classList.add('visible');
+    }
+
+    toggleAIAssist(windowId) {
+        const btn = document.getElementById(`terminal-ai-btn-${windowId}`);
+        if (btn) btn.classList.toggle('active');
+        const input = document.getElementById(`terminal-input-${windowId}`);
+        if (input) {
+            input.value = input.value.trim().startsWith('ai ') ? input.value.trim().slice(3) : 'ai ';
+            input.focus();
+        }
+        this.terminalAIAssist(windowId);
+    }
+
+    getAISuggestions(windowId, input) {
+        const allSuggestions = [
+            'ls -la',
+            'ls',
+            'cd Documents',
+            'cd Immagini',
+            'cd Musica',
+            'cd Progetto',
+            'cd Cestino',
+            'cd /',
+            'mkdir newfolder',
+            'touch newfile.txt',
+            'cat Lettera.txt',
+            'cat Note.txt',
+            'neofetch',
+            'clear',
+            'history',
+            'pwd',
+            'whoami',
+            'date',
+            'echo hello world',
+            'rm file.txt',
+            'help',
+        ];
+        
+        if (input.startsWith('ai explain ')) {
+            const cmd = input.slice(11).trim().toLowerCase();
+            const explanations = {
+                'ls': 'ls - Elenca i file e le cartelle nella directory corrente. Usa "ls -la" per dettagli completi.',
+                'cd': 'cd - Cambia la directory corrente. Esempio: cd Documents',
+                'mkdir': 'mkdir - Crea una nuova cartella. Esempio: mkdir newfolder',
+                'cat': 'cat - Visualizza il contenuto di un file. Esempio: cat filename.txt',
+                'clear': 'clear - Pulisce lo schermo del terminale.',
+                'pwd': 'pwd - Mostra il percorso della directory corrente.',
+                'whoami': 'whoami - Mostra l\'utente corrente (auraos).',
+                'date': 'date - Mostra la data e ora correnti.',
+                'neofetch': 'neofetch - Mostra informazioni di sistema in formato ASCII con logo.',
+                'rm': 'rm - Elimina un file o cartella. Esempio: rm filename.txt',
+                'history': 'history - Mostra la cronologia dei comandi inseriti.',
+                'touch': 'touch - Crea un nuovo file vuoto. Esempio: touch newfile.txt',
+                'echo': 'echo - Stampa il testo a schermo. Esempio: echo hello world',
+                'help': 'help - Mostra tutti i comandi disponibili nel terminale.',
+            };
+            return [explanations[cmd] || `${cmd} - Comando di sistema. Digita "help" per vedere tutti i comandi disponibili.`];
+        }
+        
+        const prefix = input.startsWith('ai ') ? input.slice(3) : input.startsWith('help ') ? input.slice(5) : input.startsWith('?') ? input.slice(1) : input;
+        const query = prefix.trim().toLowerCase();
+        
+        if (!query) return allSuggestions.slice(0, 8);
+        
+        return allSuggestions.filter(s => s.toLowerCase().includes(query)).slice(0, 8);
+    }
+
+    applyAISuggestion(windowId, cmd) {
+        const input = document.getElementById(`terminal-input-${windowId}`);
+        const dropdown = document.getElementById(`terminal-ai-dropdown-${windowId}`);
+        if (input) input.value = cmd;
+        if (dropdown) {
+            dropdown.innerHTML = '';
+            dropdown.classList.remove('visible');
+        }
+        input.focus();
+    }
+
+    getAIExplanation(cmd) {
+        const explanations = {
+            'ls': 'ls - Elenca i file e le cartelle nella directory corrente. Usa "ls -la" per dettagli completi.',
+            'cd': 'cd - Cambia la directory corrente. Esempio: cd Documents',
+            'mkdir': 'mkdir - Crea una nuova cartella. Esempio: mkdir newfolder',
+            'cat': 'cat - Visualizza il contenuto di un file. Esempio: cat filename.txt',
+            'clear': 'clear - Pulisce lo schermo del terminale.',
+            'pwd': 'pwd - Mostra il percorso della directory corrente.',
+            'whoami': 'whoami - Mostra l\'utente corrente (auraos).',
+            'date': 'date - Mostra la data e ora correnti.',
+            'neofetch': 'neofetch - Mostra informazioni di sistema in formato ASCII con logo.',
+            'rm': 'rm - Elimina un file o cartella. Esempio: rm filename.txt',
+            'history': 'history - Mostra la cronologia dei comandi inseriti.',
+            'touch': 'touch - Crea un nuovo file vuoto. Esempio: touch newfile.txt',
+            'echo': 'echo - Stampa il testo a schermo. Esempio: echo hello world',
+            'help': 'help - Mostra tutti i comandi disponibili nel terminale.',
+        };
+        return explanations[cmd] || `${cmd} - Comando di sistema. Digita "help" per vedere tutti i comandi disponibili.`;
     }
 
     terminalNeofetch(windowId) {
@@ -1886,13 +2410,13 @@ class AuraOSApp {
     }
 
     initNotepad(windowId) {
-        const notes = localStorage.getItem('auraos_notes') || localStorage.getItem('webos_notes');
+        const notes = localStorage.getItem('auraos_notes');
         const editor = document.getElementById(`notepad-editor-${windowId}`);
         const statusEl = document.getElementById(`notepad-status-${windowId}`);
         const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
         if (!editor) return;
         editor.textContent = notes || '';
-        editor.style.fontSize = localStorage.getItem('auraos_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14px';
+        editor.style.fontSize = localStorage.getItem('auraos_notes_fontsize') || '14px';
         this.updateNotepadWordCount(windowId);
         let saveTimeout;
         editor.addEventListener('input', () => {
@@ -1917,7 +2441,7 @@ class AuraOSApp {
     notepadFontSize(windowId, delta) {
         const editor = document.getElementById(`notepad-editor-${windowId}`);
         if (!editor) return;
-        const current = parseInt(localStorage.getItem('auraos_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14');
+        const current = parseInt(localStorage.getItem('auraos_notes_fontsize') || '14');
         const newSize = Math.max(10, Math.min(28, current + delta * 2));
         editor.style.fontSize = newSize + 'px';
         localStorage.setItem('auraos_notes_fontsize', newSize + 'px');
@@ -1970,6 +2494,9 @@ class AuraOSApp {
                 break;
             case 'music':
                 this.initMusic(windowId);
+                break;
+            case 'app-store':
+                this.initAppStore(windowId);
                 break;
         }
     }
@@ -3748,19 +4275,61 @@ class AuraOSApp {
         setTimeout(() => toast.remove(), 300);
     }
 
-    addNotification(title, message, type = 'info') {
+    addNotification(title, message, type = 'info', actions = [], appIcon = '📢') {
+        if (this.state.doNotDisturb && type !== 'error') return;
         const notif = {
             id: Date.now() + Math.random(),
             title,
             message,
             type,
             time: new Date().toISOString(),
-            read: false
+            read: false,
+            actions: actions || [],
+            appIcon: appIcon || '📢'
         };
         this.state.notifications.unshift(notif);
-        if (this.state.notifications.length > 20) this.state.notifications.pop();
+        if (this.state.notifications.length > 50) this.state.notifications.length = 50;
         this.saveNotifications();
         this.updateNotificationBadge();
+        if (this.state.notificationCenterOpen) {
+            this.renderNotifications();
+        }
+        const autoHideTypes = ['info', 'success', 'warning'];
+        if (autoHideTypes.includes(type)) {
+            setTimeout(() => {
+                this.removeNotification(notif.id);
+            }, 5000);
+        }
+    }
+
+    removeNotification(id) {
+        this.state.notifications = this.state.notifications.filter(n => n.id !== id);
+        this.saveNotifications();
+        this.updateNotificationBadge();
+        if (this.state.notificationCenterOpen) {
+            this.renderNotifications();
+        }
+    }
+
+    markAsRead(id) {
+        const notif = this.state.notifications.find(n => n.id === id);
+        if (notif) {
+            notif.read = true;
+            this.saveNotifications();
+            this.updateNotificationBadge();
+            if (this.state.notificationCenterOpen) {
+                this.renderNotifications();
+            }
+        }
+    }
+
+    markAllAsRead() {
+        this.state.notifications.forEach(n => n.read = true);
+        this.saveNotifications();
+        this.updateNotificationBadge();
+        if (this.state.notificationCenterOpen) {
+            this.renderNotifications();
+        }
     }
 
     saveNotifications() {
@@ -3787,11 +4356,64 @@ class AuraOSApp {
         } catch (e) { }
     }
 
+    getNotificationTimeString(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const notifDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const diffDays = Math.floor((todayStart - notifDate) / (1000 * 60 * 60 * 24));
+        const timeStr = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        if (diffDays === 0) return `Oggi ${timeStr}`;
+        if (diffDays === 1) return `Ieri ${timeStr}`;
+        if (diffDays < 7) {
+            const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+            return `${dayNames[date.getDay()]} ${timeStr}`;
+        }
+        return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) + ' ' + timeStr;
+    }
+
+    groupNotificationsByDate(notifications) {
+        const groups = {};
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+        const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        notifications.forEach(notif => {
+            const notifDate = new Date(notif.time);
+            const notifDayStart = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate());
+            let groupKey;
+            if (notifDayStart >= todayStart) {
+                groupKey = 'today';
+            } else if (notifDayStart >= yesterdayStart) {
+                groupKey = 'yesterday';
+            } else if (notifDayStart >= weekStart) {
+                groupKey = 'week';
+            } else {
+                groupKey = 'older';
+            }
+            if (!groups[groupKey]) groups[groupKey] = [];
+            groups[groupKey].push(notif);
+        });
+
+        const order = ['today', 'yesterday', 'week', 'older'];
+        return order.filter(k => groups[k]).map(k => ({
+            key: k,
+            label: {
+                today: 'Oggi',
+                yesterday: 'Ieri',
+                week: 'Questa settimana',
+                older: 'Più vecchie'
+            }[k],
+            notifications: groups[k]
+        }));
+    }
+
     updateNotificationBadge() {
         const badge = document.getElementById('notification-badge');
         if (!badge) return;
         const unread = this.state.notifications.filter(n => !n.read).length;
-        badge.textContent = unread;
+        badge.textContent = unread > 99 ? '99+' : unread;
         if (unread > 0) {
             badge.classList.remove('hidden');
         } else {
@@ -3810,49 +4432,126 @@ class AuraOSApp {
     openNotificationCenter() {
         this.state.notificationCenterOpen = true;
         const center = document.getElementById('notification-center');
-        if (center) center.classList.add('visible');
-        this.state.notifications.forEach(n => n.read = true);
-        this.saveNotifications();
-        this.updateNotificationBadge();
-        this.renderNotificationList();
+        if (center) {
+            center.classList.add('visible');
+            this.markAllAsRead();
+            this.renderNotifications();
+        }
     }
 
     closeNotificationCenter() {
         this.state.notificationCenterOpen = false;
         const center = document.getElementById('notification-center');
-        if (center) center.classList.remove('visible');
+        if (center) {
+            center.classList.remove('visible');
+        }
     }
 
-    renderNotificationList() {
+    renderNotifications() {
         const list = document.getElementById('notification-list');
         if (!list) return;
+
         if (this.state.notifications.length === 0) {
-            list.innerHTML = '<div class="notification-empty">Nessuna notifica</div>';
-            return;
-        }
-        const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌' };
-        list.innerHTML = this.state.notifications.map(n => {
-            const time = new Date(n.time);
-            const timeStr = time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-            return `
-                <div class="notification-item ${n.read ? '' : 'unread'}">
-                    <span class="notification-item-icon">${icons[n.type] || 'ℹ️'}</span>
-                    <div class="notification-item-body">
-                        <div class="notification-item-title">${n.title}</div>
-                        ${n.message ? `<div class="notification-item-text">${n.message}</div>` : ''}
-                        <div class="notification-item-time">${timeStr}</div>
-                    </div>
+            list.innerHTML = `
+                <div class="notification-empty">
+                    <div class="notification-empty-icon">🔔</div>
+                    <div class="notification-empty-title">Nessuna notifica</div>
+                    <div class="notification-empty-sub">Sei al corrente di tutto!</div>
                 </div>
             `;
-        }).join('');
+            return;
+        }
+
+        const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', message: '💬' };
+        const groups = this.groupNotificationsByDate(this.state.notifications);
+
+        list.innerHTML = groups.map(group => `
+            <div class="notification-group">
+                <div class="notification-group-header">${group.label}</div>
+                ${group.notifications.map((n, idx) => {
+                    const globalIdx = this.state.notifications.indexOf(n);
+                    const actionsHtml = (n.actions && n.actions.length > 0)
+                        ? `<div class="notification-item-actions">${n.actions.map((action, actionIdx) =>
+                            `<button class="notification-action-btn ${action.primary ? 'primary' : ''} ${action.danger ? 'danger' : ''}"
+                                onclick="event.stopPropagation(); app.handleNotificationAction(${globalIdx}, '${action.action}')">${action.label}</button>`
+                        ).join('')}</div>`
+                        : '';
+                    return `
+                    <div class="notification-item type-${n.type} ${n.read ? '' : 'unread'}"
+                         onclick="app.handleNotificationClick(${globalIdx})"
+                         style="animation-delay: ${globalIdx * 0.04}s">
+                        <div class="notification-item-icon">${n.appIcon || icons[n.type] || 'ℹ️'}</div>
+                        <div class="notification-item-body">
+                            <div class="notification-item-title">${this.escapeHtml(n.title)}</div>
+                            ${n.message ? `<div class="notification-item-text">${this.escapeHtml(n.message)}</div>` : ''}
+                            <div class="notification-item-time">${this.getNotificationTimeString(n.time)}</div>
+                            ${actionsHtml}
+                        </div>
+                    </div>
+                `; }).join('')}
+            </div>
+        `).join('');
+    }
+
+    handleNotificationClick(index) {
+        const notif = this.state.notifications[index];
+        if (notif) {
+            this.markAsRead(notif.id);
+            if (notif.actions && notif.actions.length === 1) {
+                this.handleNotificationAction(index, notif.actions[0].action);
+            }
+        }
+    }
+
+    handleNotificationAction(index, action) {
+        const notif = this.state.notifications[index];
+        if (!notif) return;
+        switch (action) {
+            case 'reply':
+                this.showToast('Risposta', 'Funzionalità di risposta in arrivo.', 'info', 2000);
+                break;
+            case 'close':
+                this.removeNotification(notif.id);
+                break;
+            case 'view':
+                this.showToast('Apertura', `Apertura: ${notif.title}`, 'info', 2000);
+                break;
+            case 'dismiss':
+                this.removeNotification(notif.id);
+                break;
+            case 'accept':
+                this.showToast('Accettato', 'Azione accettata.', 'success', 2000);
+                this.removeNotification(notif.id);
+                break;
+            case 'decline':
+                this.showToast('Rifiutato', 'Azione rifiutata.', 'info', 2000);
+                this.removeNotification(notif.id);
+                break;
+            default:
+                this.removeNotification(notif.id);
+        }
+        this.markAsRead(notif.id);
     }
 
     clearAllNotifications() {
         this.state.notifications = [];
         this.saveNotifications();
         this.updateNotificationBadge();
-        this.renderNotificationList();
+        this.renderNotifications();
         this.showToast('Notifiche cancellate', 'Tutte le notifiche sono state eliminate.', 'info');
+    }
+
+    toggleDoNotDisturb() {
+        this.state.doNotDisturb = !this.state.doNotDisturb;
+        const btn = document.getElementById('notif-dnd-btn');
+        const icon = document.getElementById('notif-dnd-icon');
+        const footer = document.getElementById('notification-footer');
+        if (btn) btn.classList.toggle('active', this.state.doNotDisturb);
+        if (icon) icon.textContent = this.state.doNotDisturb ? '🔔' : '🔕';
+        if (footer) footer.classList.toggle('hidden', !this.state.doNotDisturb);
+        this.showToast('Non disturbare',
+            this.state.doNotDisturb ? 'Modalità Non disturbare attivata' : 'Modalità Non disturbare disattivata',
+            'info', 2000);
     }
 
     // ===== Global Launcher =====
@@ -4050,7 +4749,7 @@ class AuraOSApp {
         this.galleryCurrentIndex = this.galleryCurrentIndex || {};
         this.gallerySlideshowActive = this.gallerySlideshowActive || {};
 
-        const saved = localStorage.getItem('auraos_gallery') || localStorage.getItem('webos_gallery');
+        const saved = localStorage.getItem('auraos_gallery');
         if (saved) {
             try {
                 this.galleryImages[windowId] = JSON.parse(saved);
@@ -4336,7 +5035,7 @@ class AuraOSApp {
         this.musicRepeat = this.musicRepeat || {};
         this.musicRepeat[windowId] = false;
 
-        const saved = localStorage.getItem('auraos_music') || localStorage.getItem('webos_music');
+        const saved = localStorage.getItem('auraos_music');
         if (saved) {
             try {
                 this.musicTracks[windowId] = JSON.parse(saved);
@@ -4587,7 +5286,679 @@ class AuraOSApp {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    // ===== New Shell: Activities =====
+    // ===== Desktop Widgets System =====
+    initWidgets() {
+        const container = document.getElementById('widgets-container');
+        if (!container) return;
+        container.innerHTML = '';
+        this.state.widgets = [];
+        const saved = localStorage.getItem('auraos_widgets');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(w => {
+                        if (w.type === 'weather') this.createWeatherWidget(w.x, w.y);
+                        else if (w.type === 'system') this.createSystemMonitorWidget(w.x, w.y);
+                        else if (w.type === 'clock') this.createClockWidget(w.x, w.y);
+                        else if (w.type === 'notes') this.createStickyNotesWidget(w.x, w.y);
+                        else if (w.type === 'quick-note') this.createQuickNoteWidget(w.x, w.y);
+                    });
+                }
+            } catch (e) { this.state.widgets = []; }
+        }
+    }
+
+    getDefaultWidgetPositions() {
+        return {
+            weather: { x: 'calc(100vw - 280px)', y: 'calc(var(--top-bar-height) + 18px)' },
+            system: { x: '18px', y: 'calc(var(--top-bar-height) + 18px)' },
+            clock: { x: 'calc(100vw - 230px)', y: 'calc(100vh - var(--dock-height) - 230px)' },
+            notes: { x: '18px', y: 'calc(var(--top-bar-height) + 200px)' },
+            'quick-note': { x: 'calc(100vw - 275px)', y: 'calc(var(--top-bar-height) + 200px)' },
+        };
+    }
+
+    getWidgetPosition(type) {
+        const defaults = this.getDefaultWidgetPositions();
+        const widget = this.state.widgets.find(w => w.type === type);
+        if (widget && widget.x != null && widget.y != null) {
+            return { x: widget.x, y: widget.y };
+        }
+        return defaults[type] || { x: '18px', y: '100px' };
+    }
+
+    createWeatherWidget(x, y) {
+        const pos = this.getWidgetPosition('weather');
+        const finalX = x != null ? x : pos.x;
+        const finalY = y != null ? y : pos.y;
+        const id = 'widget-weather-' + Date.now();
+        const widget = {
+            id, type: 'weather', x: finalX, y: finalY,
+            data: JSON.parse(localStorage.getItem('auraos_weather') || 'null'),
+        };
+        if (!widget.data) widget.data = this.generateWeatherData();
+        this.state.widgets.push(widget);
+
+        const el = document.createElement('div');
+        el.className = 'widget widget-weather';
+        el.id = id;
+        el.style.left = finalX;
+        el.style.top = finalY;
+        el.innerHTML = this.getWeatherWidgetHTML(widget.data);
+        document.getElementById('widgets-container').appendChild(el);
+        this.attachWidgetListeners(el, id);
+
+        const refreshBtn = el.querySelector('.weather-refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                widget.data = this.generateWeatherData();
+                localStorage.setItem('auraos_weather', JSON.stringify(widget.data));
+                el.innerHTML = this.getWeatherWidgetHTML(widget.data);
+                this.attachWidgetListeners(el, id);
+                this.playSound('success');
+            });
+        }
+
+        const hourlyToggle = el.querySelector('.weather-hourly-toggle');
+        if (hourlyToggle) {
+            hourlyToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const forecast = el.querySelector('.weather-hourly-forecast');
+                if (forecast) forecast.classList.toggle('visible');
+            });
+        }
+        this.saveWidgetsPosition();
+    }
+
+    getWeatherWidgetHTML(data) {
+        const forecastHTML = data.forecast.map(d => `
+            <div class="weather-forecast-day">
+                <span class="weather-forecast-day-name">${d.day}</span>
+                <span class="weather-forecast-icon">${d.icon}</span>
+                <span class="weather-forecast-temps">${d.tempHigh}°/${d.tempLow}°</span>
+            </div>
+        `).join('');
+        const hourlyHTML = (data.hourly || []).map(h => `
+            <div class="weather-hourly-row">
+                <span class="weather-hourly-time">${h.time}</span>
+                <span class="weather-hourly-icon">${h.icon}</span>
+                <span class="weather-hourly-temp">${h.temp}°C</span>
+            </div>
+        `).join('');
+        return `
+            <div class="widget-header">
+                <div class="widget-header-left">
+                    <span class="widget-header-icon">🌤️</span>
+                    <span class="widget-title">Meteo</span>
+                </div>
+                <div class="widget-controls">
+                    <button class="widget-ctrl-btn weather-refresh-btn" title="Aggiorna">🔄</button>
+                    <button class="widget-ctrl-btn widget-close-btn" title="Rimuovi" data-action="remove">✕</button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <div class="weather-main">
+                    <span class="weather-icon">${data.icon}</span>
+                    <span class="weather-temp">${data.temp}°C</span>
+                    <span class="weather-condition">${data.condition}</span>
+                </div>
+                <div class="weather-location">📍 ${data.city}, ${data.country}</div>
+                <div class="weather-details">
+                    <span>💧 ${data.humidity}%</span>
+                    <span>💨 ${data.wind} km/h</span>
+                </div>
+                <div class="weather-forecast-title">Previsioni</div>
+                <div class="weather-forecast-days">${forecastHTML}</div>
+                ${data.hourly && data.hourly.length > 0 ? `
+                    <button class="weather-hourly-toggle">🕐 Orarie</button>
+                    <div class="weather-hourly-forecast">${hourlyHTML}</div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    generateWeatherData() {
+        const conditions = [
+            { icon: '☀️', label: 'Soleggiato', tempRange: [22, 35] },
+            { icon: '⛅', label: 'Nuvoloso', tempRange: [18, 28] },
+            { icon: '🌧️', label: 'Pioggia', tempRange: [12, 22] },
+            { icon: '⛈️', label: 'Temporale', tempRange: [15, 25] },
+            { icon: '❄️', label: 'Neve', tempRange: [-5, 5] },
+        ];
+        const cities = [
+            { name: 'Roma', country: 'Italia' },
+            { name: 'Milano', country: 'Italia' },
+            { name: 'Napoli', country: 'Italia' },
+            { name: 'Torino', country: 'Italia' },
+            { name: 'Firenze', country: 'Italia' },
+        ];
+        const city = cities[Math.floor(Math.random() * cities.length)];
+        const condition = conditions[Math.floor(Math.random() * conditions.length)];
+        const temp = Math.floor(Math.random() * (condition.tempRange[1] - condition.tempRange[0])) + condition.tempRange[0];
+        const forecast = [];
+        const days = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+        const today = new Date().getDay();
+        for (let i = 1; i <= 5; i++) {
+            const dayCondition = conditions[Math.floor(Math.random() * conditions.length)];
+            forecast.push({
+                day: days[(today + i) % 7],
+                icon: dayCondition.icon,
+                tempHigh: Math.floor(Math.random() * (dayCondition.tempRange[1] - dayCondition.tempRange[0])) + dayCondition.tempRange[0],
+                tempLow: Math.floor(Math.random() * 5) + Math.floor(condition.tempRange[0] / 2),
+            });
+        }
+        const hourly = [];
+        const now = new Date().getHours();
+        const hourIcons = { morning: '🌅', midday: '☀️', afternoon: '⛅', evening: '🌙', night: '🌙' };
+        for (let i = 0; i < 6; i++) {
+            const h = (now + i) % 24;
+            const hTemp = temp + Math.floor(Math.random() * 5) - 2;
+            const icon = h >= 6 && h < 12 ? hourIcons.morning : h >= 12 && h < 17 ? hourIcons.midday : h >= 17 && h < 20 ? hourIcons.evening : h >= 20 || h < 6 ? hourIcons.night : hourIcons.midday;
+            hourly.push({ time: `${h.toString().padStart(2, '0')}:00`, icon, temp: hTemp });
+        }
+        return {
+            city: city.name, country: city.country,
+            condition: condition.label, icon: condition.icon, temp,
+            humidity: Math.floor(Math.random() * 60) + 30,
+            wind: Math.floor(Math.random() * 20) + 5,
+            forecast, hourly,
+        };
+    }
+
+    createSystemMonitorWidget(x, y) {
+        const pos = this.getWidgetPosition('system');
+        const finalX = x != null ? x : pos.x;
+        const finalY = y != null ? y : pos.y;
+        const id = 'widget-system-' + Date.now();
+        const widget = { id, type: 'system', x: finalX, y: finalY };
+        this.state.widgets.push(widget);
+
+        const el = document.createElement('div');
+        el.className = 'widget widget-system';
+        el.id = id;
+        el.style.left = finalX;
+        el.style.top = finalY;
+        el.innerHTML = `
+            <div class="widget-header">
+                <div class="widget-header-left">
+                    <span class="widget-header-icon">📊</span>
+                    <span class="widget-title">Sistema</span>
+                </div>
+                <div class="widget-controls">
+                    <button class="widget-ctrl-btn widget-close-btn" title="Rimuovi" data-action="remove">✕</button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <div class="sys-stat">
+                    <div class="sys-stat-header">
+                        <span class="sys-stat-label">CPU</span>
+                        <span class="sys-stat-value" id="${id}-cpu">0%</span>
+                    </div>
+                    <div class="sys-stat-bar-bg">
+                        <div class="sys-stat-bar" id="${id}-cpu-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="sys-stat">
+                    <div class="sys-stat-header">
+                        <span class="sys-stat-label">RAM</span>
+                        <span class="sys-stat-value" id="${id}-ram">0%</span>
+                    </div>
+                    <div class="sys-stat-bar-bg">
+                        <div class="sys-stat-bar" id="${id}-ram-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="sys-stat">
+                    <div class="sys-stat-header">
+                        <span class="sys-stat-label">Disco</span>
+                        <span class="sys-stat-value" id="${id}-disk">0%</span>
+                    </div>
+                    <div class="sys-stat-bar-bg">
+                        <div class="sys-stat-bar" id="${id}-disk-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="sys-network">
+                    <span>⬇ <span class="sys-network-speed" id="${id}-down">0 KB/s</span></span>
+                    <span>⬆ <span class="sys-network-speed" id="${id}-up">0 KB/s</span></span>
+                </div>
+            </div>
+        `;
+        document.getElementById('widgets-container').appendChild(el);
+        this.attachWidgetListeners(el, id);
+
+        const updateStats = () => {
+            const cpuVal = Math.floor(Math.random() * 60 + 10);
+            const ramVal = Math.floor(Math.random() * 50 + 30);
+            const diskVal = Math.floor(Math.random() * 30 + 40);
+            const downSpeed = (Math.random() * 5 + 0.1).toFixed(1);
+            const upSpeed = (Math.random() * 2 + 0.05).toFixed(1);
+
+            const cpuEl = document.getElementById(`${id}-cpu`);
+            const ramEl = document.getElementById(`${id}-ram`);
+            const diskEl = document.getElementById(`${id}-disk`);
+            const cpuBar = document.getElementById(`${id}-cpu-bar`);
+            const ramBar = document.getElementById(`${id}-ram-bar`);
+            const diskBar = document.getElementById(`${id}-disk-bar`);
+            const downEl = document.getElementById(`${id}-down`);
+            const upEl = document.getElementById(`${id}-up`);
+
+            if (cpuEl) cpuEl.textContent = cpuVal + '%';
+            if (ramEl) ramEl.textContent = ramVal + '%';
+            if (diskEl) diskEl.textContent = diskVal + '%';
+            if (cpuBar) { cpuBar.style.width = cpuVal + '%'; cpuBar.className = 'sys-stat-bar' + (cpuVal > 80 ? ' critical' : cpuVal > 60 ? ' warning' : ''); }
+            if (ramBar) { ramBar.style.width = ramVal + '%'; ramBar.className = 'sys-stat-bar' + (ramVal > 85 ? ' critical' : ramVal > 70 ? ' warning' : ''); }
+            if (diskBar) { diskBar.style.width = diskVal + '%'; diskBar.className = 'sys-stat-bar' + (diskVal > 90 ? ' critical' : diskVal > 75 ? ' warning' : ''); }
+            if (downEl) downEl.textContent = downSpeed + ' MB/s';
+            if (upEl) upEl.textContent = upSpeed + ' MB/s';
+        };
+        updateStats();
+        this['_sysInterval_' + id] = setInterval(() => {
+            if (document.getElementById(id)) updateStats();
+            else clearInterval(this['_sysInterval_' + id]);
+        }, 2000);
+        this.saveWidgetsPosition();
+    }
+
+    createClockWidget(x, y) {
+        const pos = this.getWidgetPosition('clock');
+        const finalX = x != null ? x : pos.x;
+        const finalY = y != null ? y : pos.y;
+        const id = 'widget-clock-' + Date.now();
+        const widget = { id, type: 'clock', x: finalX, y: finalY };
+        this.state.widgets.push(widget);
+
+        const el = document.createElement('div');
+        el.className = 'widget widget-clock';
+        el.id = id;
+        el.style.left = finalX;
+        el.style.top = finalY;
+        el.innerHTML = `
+            <div class="widget-header">
+                <div class="widget-header-left">
+                    <span class="widget-header-icon">🕐</span>
+                    <span class="widget-title">Ora</span>
+                </div>
+                <div class="widget-controls">
+                    <button class="widget-ctrl-btn widget-close-btn" title="Rimuovi" data-action="remove">✕</button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <div class="clock-time" id="${id}-time"></div>
+                <div class="clock-date" id="${id}-date"></div>
+                <div class="clock-calendar" id="${id}-calendar"></div>
+            </div>
+        `;
+        document.getElementById('widgets-container').appendChild(el);
+        this.attachWidgetListeners(el, id);
+
+        const update = () => {
+            const now = new Date();
+            const timeEl = document.getElementById(`${id}-time`);
+            const dateEl = document.getElementById(`${id}-date`);
+            if (timeEl) timeEl.textContent = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+            if (dateEl) dateEl.textContent = now.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        };
+        update();
+        this['_clockInterval_' + id] = setInterval(() => { if (document.getElementById(id)) update(); else clearInterval(this['_clockInterval_' + id]); }, 1000);
+
+        el.querySelector('.widget-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const cal = document.getElementById(`${id}-calendar`);
+            if (!cal) return;
+            cal.classList.toggle('visible');
+            if (cal.classList.contains('visible')) this.renderWidgetCalendar(id);
+        });
+        this.saveWidgetsPosition();
+    }
+
+    renderWidgetCalendar(widgetId) {
+        const cal = document.getElementById(`${widgetId}-calendar`);
+        if (!cal) return;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const today = now.getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+        const dayNames = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+        let cells = '';
+        for (let i = 0; i < firstDay; i++) cells += '<div class="cal-cell cal-empty"></div>';
+        for (let d = 1; d <= daysInMonth; d++) {
+            const cls = d === today ? 'cal-cell cal-today' : 'cal-cell';
+            cells += `<div class="${cls}">${d}</div>`;
+        }
+        cal.innerHTML = `
+            <div class="calendar-month">${monthNames[month]} ${year}</div>
+            <div class="calendar-weekdays">${dayNames.map(d => `<div class="cal-weekday">${d}</div>`).join('')}</div>
+            <div class="calendar-grid">${cells}</div>
+        `;
+    }
+
+    createStickyNotesWidget(x, y) {
+        const pos = this.getWidgetPosition('notes');
+        const finalX = x != null ? x : pos.x;
+        const finalY = y != null ? y : pos.y;
+        const id = 'widget-notes-' + Date.now();
+        const widget = { id, type: 'notes', x: finalX, y: finalY, data: { notes: [], color: 'yellow' } };
+        const savedNotes = localStorage.getItem('auraos_widget_notes');
+        if (savedNotes) {
+            try { widget.data.notes = JSON.parse(savedNotes); } catch (e) { widget.data.notes = []; }
+        }
+        this.state.widgets.push(widget);
+
+        const el = document.createElement('div');
+        el.className = 'widget widget-notes';
+        el.id = id;
+        el.style.left = finalX;
+        el.style.top = finalY;
+        el.innerHTML = `
+            <div class="widget-header">
+                <div class="widget-header-left">
+                    <span class="widget-header-icon">📝</span>
+                    <span class="widget-title">Note</span>
+                </div>
+                <div class="widget-controls">
+                    <button class="widget-ctrl-btn widget-close-btn" title="Rimuovi" data-action="remove">✕</button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <div class="notes-color-picker">
+                    <div class="notes-color-swatch active" data-color="yellow" style="background:#fef9c3;" title="Giallo"></div>
+                    <div class="notes-color-swatch" data-color="blue" style="background:#dbeafe;" title="Blu"></div>
+                    <div class="notes-color-swatch" data-color="green" style="background:#dcfce7;" title="Verde"></div>
+                    <div class="notes-color-swatch" data-color="pink" style="background:#fce7f3;" title="Rosa"></div>
+                </div>
+                <div class="notes-list" id="${id}-list"></div>
+                <div class="note-add-row">
+                    <input type="text" class="note-input" id="${id}-input" placeholder="Nuova nota..." maxlength="200">
+                    <button class="note-add-btn" id="${id}-add-btn" title="Aggiungi">+</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('widgets-container').appendChild(el);
+        this.attachWidgetListeners(el, id);
+
+        const w = this.state.widgets.find(w => w.id === id);
+        const renderNotes = () => {
+            const list = document.getElementById(`${id}-list`);
+            if (!list || !w) return;
+            if (w.data.notes.length === 0) {
+                list.innerHTML = '<div class="notes-empty">Nessuna nota</div>';
+                return;
+            }
+            list.innerHTML = w.data.notes.map((note, idx) => `
+                <div class="sticky-note note-${note.color || 'yellow'}" data-idx="${idx}">
+                    <div style="padding-right:16px;cursor:default;">${this.escapeHtml(note.text)}</div>
+                    <button class="note-delete-btn" data-delete="${idx}" title="Elimina">✕</button>
+                </div>
+            `).join('');
+            list.querySelectorAll('.note-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.dataset.delete);
+                    if (w && w.data.notes[idx]) {
+                        w.data.notes.splice(idx, 1);
+                        this.saveWidgetNotes(id);
+                        renderNotes();
+                    }
+                });
+            });
+        };
+        renderNotes();
+
+        const input = document.getElementById(`${id}-input`);
+        const addBtn = document.getElementById(`${id}-add-btn`);
+        const addNote = () => {
+            if (!input || !w) return;
+            const text = input.value.trim();
+            if (!text) return;
+            w.data.notes.unshift({ text, color: w.data.color || 'yellow', createdAt: Date.now() });
+            input.value = '';
+            this.saveWidgetNotes(id);
+            renderNotes();
+            this.playSound('success');
+        };
+        if (addBtn) addBtn.addEventListener('click', (e) => { e.stopPropagation(); addNote(); });
+        if (input) {
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.stopPropagation(); addNote(); } });
+            input.addEventListener('click', (e) => e.stopPropagation());
+        }
+
+        el.querySelectorAll('.notes-color-swatch').forEach(swatch => {
+            swatch.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!w) return;
+                w.data.color = swatch.dataset.color;
+                el.querySelectorAll('.notes-color-swatch').forEach(s => s.classList.remove('active'));
+                swatch.classList.add('active');
+                this.saveWidgetNotes(id);
+            });
+        });
+        this.saveWidgetsPosition();
+    }
+
+    createQuickNoteWidget(x, y) {
+        const pos = this.getWidgetPosition('quick-note');
+        const finalX = x != null ? x : pos.x;
+        const finalY = y != null ? y : pos.y;
+        const id = 'widget-quicknote-' + Date.now();
+        const widget = { id, type: 'quick-note', x: finalX, y: finalY, data: { text: '' } };
+        const saved = localStorage.getItem('auraos_quick_note');
+        if (saved) widget.data.text = saved;
+        this.state.widgets.push(widget);
+
+        const el = document.createElement('div');
+        el.className = 'widget widget-quick-note';
+        el.id = id;
+        el.style.left = finalX;
+        el.style.top = finalY;
+        el.innerHTML = `
+            <div class="widget-header">
+                <div class="widget-header-left">
+                    <span class="widget-header-icon">📌</span>
+                    <span class="widget-title">Nota rapida</span>
+                </div>
+                <div class="widget-controls">
+                    <button class="widget-ctrl-btn widget-close-btn" title="Rimuovi" data-action="remove">✕</button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <textarea class="quick-note-area" id="${id}-area" placeholder="Scrivi la tua nota...">${widget.data.text || ''}</textarea>
+                <div class="quick-note-status" id="${id}-status">Salvato automaticamente</div>
+            </div>
+        `;
+        document.getElementById('widgets-container').appendChild(el);
+        this.attachWidgetListeners(el, id);
+
+        const area = document.getElementById(`${id}-area`);
+        if (area) {
+            let saveTimeout;
+            area.addEventListener('input', () => {
+                const statusEl = document.getElementById(`${id}-status`);
+                if (statusEl) statusEl.textContent = 'Salvataggio...';
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    const w2 = this.state.widgets.find(w => w.id === id);
+                    if (w2) w2.data.text = area.value;
+                    localStorage.setItem('auraos_quick_note', area.value);
+                    if (statusEl) statusEl.textContent = 'Salvato ✓';
+                }, 600);
+            });
+            area.addEventListener('click', (e) => e.stopPropagation());
+        }
+        this.saveWidgetsPosition();
+    }
+
+    attachWidgetListeners(el, widgetId) {
+        this.makeWidgetDraggable(el, widgetId);
+        el.querySelectorAll('[data-action="remove"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeWidget(widgetId);
+            });
+        });
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.showWidgetContextMenu(e.clientX, e.clientY, widgetId);
+        });
+    }
+
+    makeWidgetDraggable(widgetEl, widgetId) {
+        const header = widgetEl.querySelector('.widget-header');
+        if (!header) return;
+
+        const existing = widgetEl._dragHandlers;
+        if (existing) {
+            document.removeEventListener('mousemove', existing.onMouseMove);
+            document.removeEventListener('mouseup', existing.onMouseUp);
+        }
+
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+        let hasMoved = false;
+
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            hasMoved = true;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            widgetEl.style.left = Math.max(0, initialX + dx) + 'px';
+            widgetEl.style.top = Math.max(36, initialY + dy) + 'px';
+        };
+
+        const onMouseUp = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            widgetEl.style.transition = '';
+            widgetEl.style.zIndex = '';
+            if (hasMoved) {
+                const w = this.state.widgets.find(w => w.id === widgetId);
+                if (w) { w.x = widgetEl.style.left; w.y = widgetEl.style.top; }
+                this.saveWidgetsPosition();
+            }
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.widget-ctrl-btn') || e.target.closest('.notes-color-swatch') || e.target.closest('.note-input') || e.target.closest('.note-add-btn') || e.target.closest('.note-delete-btn')) return;
+            isDragging = true;
+            hasMoved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            initialX = widgetEl.offsetLeft;
+            initialY = widgetEl.offsetTop;
+            widgetEl.style.transition = 'none';
+            widgetEl.style.zIndex = '50';
+            e.preventDefault();
+        });
+
+        widgetEl._dragHandlers = { onMouseMove, onMouseUp };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+    saveWidgetsPosition() {
+        try {
+            localStorage.setItem('auraos_widgets', JSON.stringify(this.state.widgets || []));
+        } catch (e) {}
+    }
+
+    loadWidgetsPosition() {
+        this.initWidgets();
+    }
+
+    removeWidget(widgetId) {
+        const el = document.getElementById(widgetId);
+        if (el) {
+            el.classList.add('widget-removing');
+            if (this['_sysInterval_' + widgetId]) { clearInterval(this['_sysInterval_' + widgetId]); delete this['_sysInterval_' + widgetId]; }
+            if (this['_clockInterval_' + widgetId]) { clearInterval(this['_clockInterval_' + widgetId]); delete this['_clockInterval_' + widgetId]; }
+            setTimeout(() => el.remove(), 250);
+        }
+        this.state.widgets = (this.state.widgets || []).filter(w => w.id !== widgetId);
+        this.saveWidgetsPosition();
+    }
+
+    showWidgetContextMenu(x, y, widgetId) {
+        this.hideContextMenu();
+        const menu = document.createElement('div');
+        menu.id = 'context-menu';
+        menu.className = 'context-menu';
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.innerHTML = `
+            <div class="context-menu-item danger" data-action="remove-widget" data-wid="${widgetId}">🗑️ Rimuovi widget</div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" data-action="bring-front" data-wid="${widgetId}">⬆️ Porta in primo piano</div>
+        `;
+        menu.querySelectorAll('.context-menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = item.dataset.action;
+                const wid = item.dataset.wid;
+                if (action === 'remove-widget') this.removeWidget(wid);
+                else if (action === 'bring-front') {
+                    const widgetEl = document.getElementById(wid);
+                    if (widgetEl) { widgetEl.style.zIndex = '60'; setTimeout(() => widgetEl.style.zIndex = '', 1000); }
+                }
+                this.hideContextMenu();
+            });
+        });
+        document.body.appendChild(menu);
+        this.state.contextMenuOpen = true;
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 5) + 'px';
+        if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 5) + 'px';
+    }
+
+    saveWidgetNotes(widgetId) {
+        const w = this.state.widgets.find(w => w.id === widgetId);
+        if (w && w.data && w.data.notes) {
+            try { localStorage.setItem('auraos_widget_notes', JSON.stringify(w.data.notes)); } catch (e) {}
+        }
+    }
+
+    // ===== Widget Start Menu Section =====
+    addWidgetStartMenuItems() {
+        const container = document.getElementById('start-menu-items');
+        if (!container) return;
+        const separator = container.querySelector('.start-menu-separator');
+        if (!separator) return;
+        if (container.querySelector('.widget-start-menu-section')) return;
+
+        const section = document.createElement('div');
+        section.className = 'widget-start-menu-section';
+        section.innerHTML = `
+            <div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;font-family:var(--font-family);">Widget</div>
+            <button class="start-menu-item" data-widget-type="weather" onclick="app.createWeatherWidget()">
+                <span class="start-menu-icon">🌤️</span>
+                <span>Meteo</span>
+            </button>
+            <button class="start-menu-item" data-widget-type="system" onclick="app.createSystemMonitorWidget()">
+                <span class="start-menu-icon">📊</span>
+                <span>Monitor Sistema</span>
+            </button>
+            <button class="start-menu-item" data-widget-type="clock" onclick="app.createClockWidget()">
+                <span class="start-menu-icon">🕐</span>
+                <span>Orologio</span>
+            </button>
+            <button class="start-menu-item" data-widget-type="notes" onclick="app.createStickyNotesWidget()">
+                <span class="start-menu-icon">📝</span>
+                <span>Note Adesive</span>
+            </button>
+            <button class="start-menu-item" data-widget-type="quick-note" onclick="app.createQuickNoteWidget()">
+                <span class="start-menu-icon">📌</span>
+                <span>Nota Rapida</span>
+            </button>
+        `;
+        container.insertBefore(section, separator);
+    }
+
+    // ===== Existing methods continued below... =====
     toggleActivities(forceState = null) {
         const overlay = document.getElementById('activities-overlay');
         if (forceState !== null) {
@@ -4598,22 +5969,23 @@ class AuraOSApp {
         if (this.state.activitiesOpen) {
             if (overlay) overlay.classList.remove('hidden');
             this.renderActivitiesWindows();
-            this.renderActivitiesWorkspaces();
+            this.renderWorkspaceOverview();
             this.playSound('open');
         } else {
             if (overlay) overlay.classList.add('hidden');
+            this.hideWorkspaceContextMenu();
         }
     }
 
     renderActivitiesWindows() {
         const container = document.getElementById('activities-windows');
         if (!container) return;
-        if (this.state.openWindows.length === 0) {
-            container.innerHTML = '<div class="activities-empty">Nessuna finestra aperta</div>';
+        const workspaceWindows = this.state.openWindows.filter(w => w.workspaceId === this.state.currentWorkspace);
+        if (workspaceWindows.length === 0) {
+            container.innerHTML = '<div class="activities-empty">Nessuna finestra aperta in questo spazio</div>';
             return;
         }
-        container.innerHTML = this.state.openWindows.map(w => {
-            const win = document.getElementById(w.id);
+        container.innerHTML = workspaceWindows.map(w => {
             const isActive = this.state.activeWindow === w.id;
             return `
                 <div class="activities-window-thumb ${isActive ? 'active' : ''}" onclick="app.focusWindow('${w.id}'); app.toggleActivities(false);">
@@ -4628,21 +6000,348 @@ class AuraOSApp {
     }
 
     renderActivitiesWorkspaces() {
-        const list = document.getElementById('workspace-list');
-        if (!list) return;
-        const items = list.querySelectorAll('.workspace-item');
-        items.forEach(item => {
-            const ws = parseInt(item.dataset.ws);
-            item.classList.toggle('active', ws === this.state.currentWorkspace);
-        });
+        // Legacy method - workspace switching now handled by renderWorkspaceOverview
     }
 
     switchWorkspace(num) {
-        if (num < 1 || num > 3) return;
+        if (num < 1 || num > this.state.workspaces.length) return;
         this.state.currentWorkspace = num;
-        this.renderActivitiesWorkspaces();
+        this.renderActivitiesWindows();
+        this.renderWorkspaceOverview();
         this.addNotification('Spazio di lavoro', `Spazio di lavoro ${num} selezionato.`, 'info');
         this.showToast('Spazio di lavoro', `Spazio di lavoro ${num} selezionato.`, 'info', 2000);
+    }
+
+    renderWorkspaceOverview() {
+        const grid = document.getElementById('workspace-grid');
+        if (!grid) return;
+        grid.innerHTML = this.state.workspaces.map(ws => {
+            const isActive = ws.id === this.state.currentWorkspace;
+            const windows = this.state.openWindows.filter(w => w.workspaceId === ws.id);
+            const thumbs = windows.length > 0
+                ? windows.map(w => this.getWindowThumbnail(w.id)).join('')
+                : `<div class="workspace-empty-state">
+                        <span class="workspace-empty-icon">＋</span>
+                        <span>Nessuna finestra</span>
+                   </div>`;
+            return `
+                <div class="workspace-thumbnail ${isActive ? 'active' : ''}"
+                     data-ws="${ws.id}"
+                     draggable="false"
+                     onclick="app.switchWorkspaceFromOverview(${ws.id})"
+                     oncontextmenu="app.showWorkspaceContextMenu(event, ${ws.id})"
+                     ondragover="app.handleWorkspaceDragOver(event, ${ws.id})"
+                     ondragleave="app.handleWorkspaceDragLeave(event, ${ws.id})"
+                     ondrop="app.handleWorkspaceDrop(event, ${ws.id})">
+                    <div class="workspace-thumbnail-header">
+                        <span class="workspace-thumbnail-name" title="${this.escapeHtml(ws.name)}">${this.escapeHtml(ws.name)}</span>
+                        <div class="workspace-thumbnail-controls">
+                            <button class="workspace-thumbnail-btn" onclick="event.stopPropagation(); app.startRenameWorkspace(${ws.id})" title="Rinomina">✎</button>
+                            ${this.state.workspaces.length > 1 ? `<button class="workspace-thumbnail-btn danger" onclick="event.stopPropagation(); app.removeWorkspace(${ws.id})" title="Elimina">✕</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="workspace-thumbnail-preview">
+                        ${thumbs}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        this.attachWorkspaceMiniWindowDragListeners();
+    }
+
+    getWorkspaceThumbnails(workspaceId) {
+        const ws = this.state.workspaces.find(w => w.id === workspaceId);
+        if (!ws) return '';
+        const windows = this.state.openWindows.filter(w => w.workspaceId === workspaceId);
+        return windows.map(w => this.getWindowThumbnail(w.id)).join('');
+    }
+
+    getWindowThumbnail(windowId) {
+        const winData = this.state.openWindows.find(w => w.id === windowId);
+        if (!winData) return '';
+        return `
+            <div class="workspace-mini-window"
+                 draggable="true"
+                 data-window-id="${winData.id}"
+                 ondragstart="app.handleMiniWindowDragStart(event, '${winData.id}')"
+                 ondragend="app.handleMiniWindowDragEnd(event)"
+                 title="${this.escapeHtml(winData.title)}">
+                <span class="workspace-mini-icon">${winData.icon || '📦'}</span>
+                <span class="workspace-mini-title">${this.escapeHtml(winData.title)}</span>
+            </div>
+        `;
+    }
+
+    switchWorkspaceFromOverview(workspaceId) {
+        if (workspaceId < 1 || workspaceId > this.state.workspaces.length) return;
+        this.state.currentWorkspace = workspaceId;
+        const ws = this.state.workspaces.find(w => w.id === workspaceId);
+        if (!ws) return;
+        this.animateWorkspaceSwitch(workspaceId);
+        this.renderActivitiesWindows();
+        this.renderWorkspaceOverview();
+        this.addNotification('Spazio di lavoro', `Sei passato a "${ws.name}".`, 'info');
+        this.showToast('Spazio di lavoro', `Sei passato a "${ws.name}".`, 'info', 2000);
+        this.saveWorkspaceConfig();
+    }
+
+    animateWorkspaceSwitch(workspaceId) {
+        const wsThumbs = document.querySelectorAll('.workspace-thumbnail');
+        wsThumbs.forEach(el => {
+            const wsId = parseInt(el.dataset.ws);
+            if (wsId === workspaceId) {
+                el.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease';
+                el.style.transform = 'scale(1.04)';
+                setTimeout(() => {
+                    el.style.transform = '';
+                }, 250);
+            }
+        });
+        const desktop = document.getElementById('desktop');
+        if (desktop) {
+            desktop.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+            desktop.style.opacity = '0.85';
+            desktop.style.transform = 'scale(0.995)';
+            setTimeout(() => {
+                desktop.style.opacity = '1';
+                desktop.style.transform = '';
+            }, 220);
+        }
+    }
+
+    addNewWorkspace() {
+        if (this.state.workspaces.length >= 9) {
+            this.showToast('Spazi di lavoro', 'Puoi creare al massimo 9 spazi di lavoro.', 'warning', 2500);
+            return;
+        }
+        const nextId = this.state.workspaces.length > 0 ? Math.max(...this.state.workspaces.map(w => w.id)) + 1 : 1;
+        const num = this.state.workspaces.length + 1;
+        const newWs = {
+            id: nextId,
+            name: `Spazio ${num}`,
+            windows: []
+        };
+        this.state.workspaces.push(newWs);
+        this.renderWorkspaceOverview();
+        this.saveWorkspaceConfig();
+        this.showToast('Spazio di lavoro', `"${newWs.name}" creato.`, 'success', 2000);
+        this.addNotification('Spazio di lavoro', `"${newWs.name}" è stato creato.`, 'info');
+        setTimeout(() => this.switchWorkspaceFromOverview(nextId), 100);
+    }
+
+    removeWorkspace(workspaceId) {
+        if (this.state.workspaces.length <= 1) {
+            this.showToast('Spazio di lavoro', 'Devi mantenere almeno uno spazio di lavoro.', 'warning', 2500);
+            return;
+        }
+        const ws = this.state.workspaces.find(w => w.id === workspaceId);
+        if (!ws) return;
+        const wsWindows = this.state.openWindows.filter(w => w.workspaceId === workspaceId);
+        if (wsWindows.length > 0) {
+            if (!confirm(`"${ws.name}" ha ${wsWindows.length} finestra(e) aperta(e). Eliminare lo spazio di lavoro? Le finestre verranno spostate.`)) {
+                return;
+            }
+            wsWindows.forEach(w => {
+                w.workspaceId = this.state.currentWorkspace;
+                const wsData = this.state.workspaces.find(ws => ws.id === this.state.currentWorkspace);
+                if (wsData && !wsData.windows.includes(w.id)) {
+                    wsData.windows.push(w.id);
+                }
+            });
+        }
+        this.state.workspaces = this.state.workspaces.filter(w => w.id !== workspaceId);
+        if (this.state.currentWorkspace === workspaceId) {
+            this.state.currentWorkspace = this.state.workspaces[0]?.id || 1;
+        } else if (this.state.currentWorkspace > workspaceId) {
+            this.state.currentWorkspace--;
+        }
+        this.renderActivitiesWindows();
+        this.renderWorkspaceOverview();
+        this.saveWorkspaceConfig();
+        this.showToast('Spazio di lavoro', `"${ws.name}" eliminato.`, 'info', 2000);
+    }
+
+    startRenameWorkspace(workspaceId) {
+        const ws = this.state.workspaces.find(w => w.id === workspaceId);
+        if (!ws) return;
+        const nameEl = document.querySelector(`.workspace-thumbnail[data-ws="${workspaceId}"] .workspace-thumbnail-name`);
+        if (!nameEl) return;
+        nameEl.contentEditable = 'true';
+        nameEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(nameEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        const finishRename = () => {
+            nameEl.contentEditable = 'false';
+            const newName = nameEl.textContent.trim();
+            if (newName && newName !== ws.name) {
+                this.renameWorkspace(workspaceId, newName);
+            } else {
+                nameEl.textContent = ws.name;
+            }
+            nameEl.removeEventListener('blur', finishRename);
+            nameEl.removeEventListener('keydown', keyHandler);
+        };
+        const keyHandler = (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); }
+            if (e.key === 'Escape') { nameEl.textContent = ws.name; nameEl.blur(); }
+        };
+        nameEl.addEventListener('blur', finishRename);
+        nameEl.addEventListener('keydown', keyHandler);
+    }
+
+    renameWorkspace(workspaceId, newName) {
+        const ws = this.state.workspaces.find(w => w.id === workspaceId);
+        if (!ws || !newName) return;
+        ws.name = newName;
+        this.renderWorkspaceOverview();
+        this.saveWorkspaceConfig();
+        this.showToast('Spazio di lavoro', `Rinominato in "${newName}".`, 'success', 2000);
+    }
+
+    showWorkspaceContextMenu(e, workspaceId) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.hideWorkspaceContextMenu();
+        const ws = this.state.workspaces.find(w => w.id === workspaceId);
+        if (!ws) return;
+        const menu = document.createElement('div');
+        menu.className = 'workspace-context-menu';
+        menu.id = 'workspace-context-menu';
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        menu.innerHTML = `
+            <div class="workspace-context-menu-item" data-action="rename" data-ws="${workspaceId}">✎ Rinomina</div>
+            ${this.state.workspaces.length > 1 ? `<div class="workspace-context-separator"></div>
+            <div class="workspace-context-menu-item danger" data-action="delete" data-ws="${workspaceId}">🗑 Elimina</div>` : ''}
+        `;
+        menu.querySelectorAll('.workspace-context-menu-item').forEach(item => {
+            item.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const action = item.dataset.action;
+                const wsId = parseInt(item.dataset.ws);
+                if (action === 'rename') this.startRenameWorkspace(wsId);
+                else if (action === 'delete') this.removeWorkspace(wsId);
+                this.hideWorkspaceContextMenu();
+            });
+        });
+        document.body.appendChild(menu);
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 5) + 'px';
+        if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 5) + 'px';
+    }
+
+    hideWorkspaceContextMenu() {
+        const existing = document.getElementById('workspace-context-menu');
+        if (existing) existing.remove();
+    }
+
+    handleMiniWindowDragStart(e, windowId) {
+        e.dataTransfer.setData('text/plain', windowId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.target.classList.add('dragging');
+        this._draggedWindowId = windowId;
+    }
+
+    handleMiniWindowDragEnd(e) {
+        e.target.classList.remove('dragging');
+        this._draggedWindowId = null;
+        document.querySelectorAll('.workspace-thumbnail.drag-over').forEach(el => el.classList.remove('drag-over'));
+    }
+
+    handleWorkspaceDragOver(e, workspaceId) {
+        e.preventDefault();
+        if (this._draggedWindowId) {
+            e.dataTransfer.dropEffect = 'move';
+            const thumb = document.querySelector(`.workspace-thumbnail[data-ws="${workspaceId}"]`);
+            if (thumb) thumb.classList.add('drag-over');
+        }
+    }
+
+    handleWorkspaceDragLeave(e, workspaceId) {
+        const thumb = document.querySelector(`.workspace-thumbnail[data-ws="${workspaceId}"]`);
+        if (thumb) thumb.classList.remove('drag-over');
+    }
+
+    handleWorkspaceDrop(e, workspaceId) {
+        e.preventDefault();
+        const thumb = document.querySelector(`.workspace-thumbnail[data-ws="${workspaceId}"]`);
+        if (thumb) thumb.classList.remove('drag-over');
+        const windowId = e.dataTransfer.getData('text/plain');
+        if (!windowId) return;
+        const winData = this.state.openWindows.find(w => w.id === windowId);
+        if (!winData) return;
+        const oldWorkspaceId = winData.workspaceId;
+        winData.workspaceId = workspaceId;
+        const oldWs = this.state.workspaces.find(w => w.id === oldWorkspaceId);
+        const newWs = this.state.workspaces.find(w => w.id === workspaceId);
+        if (oldWs) oldWs.windows = oldWs.windows.filter(id => id !== windowId);
+        if (newWs && !newWs.windows.includes(windowId)) newWs.windows.push(windowId);
+        this.renderWorkspaceOverview();
+        this.renderActivitiesWindows();
+        this.saveWorkspaceConfig();
+        this.showToast('Spazio di lavoro', `"${winData.title}" spostato in "${newWs?.name || 'spazio'}".`, 'info', 2000);
+    }
+
+    attachWorkspaceMiniWindowDragListeners() {
+        document.querySelectorAll('.workspace-mini-window').forEach(el => {
+            if (!el._dragListenerAttached) {
+                el._dragListenerAttached = true;
+            }
+        });
+    }
+
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    saveWorkspaceConfig() {
+        try {
+            const config = {
+                workspaces: this.state.workspaces,
+                currentWorkspace: this.state.currentWorkspace,
+                windowAssignments: {}
+            };
+            this.state.openWindows.forEach(w => {
+                config.windowAssignments[w.id] = w.workspaceId;
+            });
+            localStorage.setItem('auraos_workspaces', JSON.stringify(config));
+        } catch (e) {
+            // Storage full or unavailable
+        }
+    }
+
+    loadWorkspaceConfig() {
+        try {
+            const saved = localStorage.getItem('auraos_workspaces');
+            if (saved) {
+                const config = JSON.parse(saved);
+                if (config.workspaces && config.workspaces.length > 0) {
+                    this.state.workspaces = config.workspaces;
+                }
+                if (config.currentWorkspace) {
+                    this.state.currentWorkspace = config.currentWorkspace;
+                }
+                if (config.windowAssignments) {
+                    this.state.openWindows.forEach(w => {
+                        if (config.windowAssignments[w.id]) {
+                            w.workspaceId = config.windowAssignments[w.id];
+                        } else {
+                            w.workspaceId = this.state.currentWorkspace;
+                        }
+                    });
+                }
+            }
+            this.state.workspaces.forEach(ws => {
+                if (!ws.windows) ws.windows = [];
+            });
+        } catch (e) {
+            this.state.workspaces.forEach(ws => { ws.windows = []; });
+        }
     }
 
     handleActivitiesSearch(query) {
@@ -4805,6 +6504,298 @@ class AuraOSApp {
             document.body.classList.add('dark-theme');
         } else {
             document.body.classList.remove('dark-theme');
+        }
+    }
+
+    // ===== App Store =====
+    getInstalledApps() {
+        try {
+            const saved = localStorage.getItem('auraos_installed_apps');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveInstalledApps(installed) {
+        localStorage.setItem('auraos_installed_apps', JSON.stringify(installed));
+    }
+
+    installApp(appId) {
+        const installed = this.getInstalledApps();
+        if (!installed.includes(appId)) {
+            installed.push(appId);
+            this.saveInstalledApps(installed);
+        }
+        const appData = this.getAppStoreApps().find(a => a.id === appId);
+        if (appData && !this.desktopApps.find(a => a.id === appId)) {
+            this.desktopApps.push({
+                id: appData.id,
+                name: appData.name,
+                icon: appData.icon,
+                description: appData.description,
+            });
+        }
+        this.createDesktopIcons();
+        this.addStartMenuItem(appId);
+        const appName = appData ? appData.name : appId;
+        this.showToast('App Installata', `"${appName}" è stata installata con successo.`, 'success');
+        this.addNotification('Installazione', `"${appName}" installata.`, 'info');
+        this.playSound('success');
+    }
+
+    uninstallApp(appId) {
+        let installed = this.getInstalledApps();
+        installed = installed.filter(id => id !== appId);
+        this.saveInstalledApps(installed);
+        this.desktopApps = this.desktopApps.filter(a => a.id !== appId);
+        this.createDesktopIcons();
+        this.removeStartMenuItem(appId);
+        const appData = this.getAppStoreApps().find(a => a.id === appId);
+        const appName = appData ? appData.name : appId;
+        this.showToast('App Disinstallata', `"${appName}" è stata disinstallata.`, 'info');
+        this.addNotification('Disinstallazione', `"${appName}" disinstallata.`, 'info');
+        this.playSound('success');
+    }
+
+    isAppInstalled(appId) {
+        return this.getInstalledApps().includes(appId);
+    }
+
+    getAppStoreApps() {
+        return [
+            { id: 'file-manager', name: 'File e cartelle', icon: '📁', description: 'Gestisci i tuoi file in modo semplice e veloce', category: 'Utilità', rating: 5 },
+            { id: 'notepad', name: 'Blocco Note', icon: '📝', description: 'Scrivi appunti e note veloci', category: 'Produttività', rating: 4 },
+            { id: 'terminal', name: 'Terminale', icon: '💻', description: 'Usa la riga di comando come un professionista', category: 'Utilità', rating: 5 },
+            { id: 'browser', name: 'Internet', icon: '🌐', description: 'Esplora il web in modo sicuro', category: 'Utilità', rating: 4 },
+            { id: 'tutor', name: 'Tutor AI', icon: '🤖', description: 'Il tuo assistente virtuale intelligente', category: 'Educazione', rating: 5 },
+            { id: 'settings', name: 'Impostazioni', icon: '⚙️', description: 'Personalizza il tuo sistema', category: 'Utilità', rating: 4 },
+            { id: 'guide', name: 'Guida', icon: '📖', description: 'Impara come usare AuraOS', category: 'Educazione', rating: 5 },
+            { id: 'games', name: 'Giochi', icon: '🎮', description: 'Impara divertendoti con i giochi', category: 'Intrattenimento', rating: 4 },
+            { id: 'calculator', name: 'Calcolatrice', icon: '🧮', description: 'Fai calcoli veloci e complessi', category: 'Produttività', rating: 5 },
+            { id: 'gallery', name: 'Galleria', icon: '🖼️', description: 'Guarda le tue immagini', category: 'Grafica', rating: 4 },
+            { id: 'music', name: 'Musica', icon: '🎵', description: 'Ascolta la tua musica preferita', category: 'Intrattenimento', rating: 5 },
+            { id: 'app-store', name: 'App Store', icon: '🛒', description: 'Scarica nuove app e giochi', category: 'Utilità', rating: 5 },
+            { id: 'text-editor', name: 'Editor di Testo', icon: '📄', description: 'Editor avanzato con syntax highlighting', category: 'Produttività', rating: 4 },
+            { id: 'image-viewer', name: 'Visualizzatore Immagini', icon: '🖼️', description: 'Visualizza e modifica immagini', category: 'Grafica', rating: 4 },
+            { id: 'video-player', name: 'Video Player', icon: '🎬', description: 'Riproduci i tuoi video', category: 'Intrattenimento', rating: 4 },
+            { id: 'pdf-viewer', name: 'PDF Viewer', icon: '📕', description: 'Visualizza file PDF', category: 'Produttività', rating: 4 },
+            { id: 'archive-manager', name: 'Gestore Archivi', icon: '🗜️', description: 'Comprimi e decomprimi file', category: 'Utilità', rating: 4 },
+            { id: 'system-monitor', name: 'Monitor di Sistema', icon: '📈', description: 'Monitora CPU, RAM e disco', category: 'Utilità', rating: 5 },
+            { id: 'disk-usage', name: 'Utilizzo Disco', icon: '💾', description: 'Analizza lo spazio su disco', category: 'Utilità', rating: 4 },
+            { id: 'font-viewer', name: 'Visualizzatore Font', icon: '🔤', description: 'Esplora i font installati', category: 'Grafica', rating: 3 },
+            { id: 'screenshot', name: 'Screenshot', icon: '📸', description: 'Cattura schermate del desktop', category: 'Utilità', rating: 4 },
+            { id: 'screen-recorder', name: 'Registratore Schermo', icon: '🎥', description: 'Registra il tuo desktop', category: 'Intrattenimento', rating: 4 },
+            { id: 'weather-app', name: 'Meteo', icon: '🌤️', description: 'Previsioni meteo dettagliate', category: 'Utilità', rating: 4 },
+            { id: 'calendar', name: 'Calendario', icon: '📅', description: 'Gestisci eventi e appuntamenti', category: 'Produttività', rating: 4 },
+            { id: 'contacts', name: 'Contatti', icon: '👥', description: 'Gestisci i tuoi contatti', category: 'Produttività', rating: 4 },
+            { id: 'notes-app', name: 'Note', icon: '📓', description: 'Note avanzate con markdown', category: 'Produttività', rating: 4 },
+            { id: 'tasks', name: 'Attività', icon: '✅', description: 'Gestisci i tuoi task', category: 'Produttività', rating: 4 },
+            { id: 'code-editor', name: 'Editor di Codice', icon: '💻', description: 'Editor di codice professionale con evidenziazione della sintassi', category: 'Produttività', rating: 5 },
+            { id: 'password-manager', name: 'Gestore Password', icon: '🔐', description: 'Gestisci le tue password in sicurezza', category: 'Utilità', rating: 4 },
+            { id: 'email-client', name: 'Client Email', icon: '📧', description: 'Leggi e invia email', category: 'Produttività', rating: 4 },
+            { id: 'chat-app', name: 'Chat', icon: '💬', description: 'Messaggistica istantanea', category: 'Intrattenimento', rating: 4 },
+            { id: 'photo-editor', name: 'Editor Foto', icon: '🎨', description: 'Modifica e ritocca le tue foto', category: 'Grafica', rating: 5 },
+            { id: 'video-editor', name: 'Editor Video', icon: '🎬', description: 'Monta e modifica i tuoi video', category: 'Grafica', rating: 4 },
+            { id: '3d-viewer', name: 'Visualizzatore 3D', icon: '🧊', description: 'Visualizza modelli 3D', category: 'Grafica', rating: 3 },
+            { id: 'clock-app', name: 'Sveglia', icon: '⏰', description: 'Sveglia, timer e cronometro', category: 'Utilità', rating: 4 },
+            { id: 'map-app', name: 'Mappe', icon: '🗺️', description: 'Naviga e esplora le mappe', category: 'Utilità', rating: 4 },
+            { id: 'notes-pro', name: 'Note Pro', icon: '📒', description: 'Note professionali con organizzazione avanzata', category: 'Produttività', rating: 5 },
+            { id: 'whiteboard', name: 'Lavagna', icon: '📋', description: 'Lavagna digitale per disegnare e annotare', category: 'Educazione', rating: 4 },
+            { id: 'calibre', name: 'Lettore eBook', icon: '📚', description: 'Leggi i tuoi eBook preferiti', category: 'Intrattenimento', rating: 4 },
+            { id: 'scan-app', name: 'Scanner', icon: '📠', description: 'Scansiona documenti e immagini', category: 'Utilità', rating: 3 },
+            { id: 'remote-desktop', name: 'Desktop Remoto', icon: '🖥️', description: 'Connettiti a computer remoti', category: 'Utilità', rating: 3 },
+            { id: 'backup-app', name: 'Backup', icon: '💿', description: 'Esegui il backup dei tuoi dati', category: 'Utilità', rating: 4 },
+        ];
+    }
+
+    getAppStoreContent(windowId) {
+        const installed = this.getInstalledApps();
+        const apps = this.getAppStoreApps();
+        const featuredApp = apps.find(a => a.id === 'app-store') || apps[0];
+        const featuredStars = this.getStarsHTML(featuredApp.rating);
+
+        const categories = ['Tutte', 'Produttività', 'Educazione', 'Intrattenimento', 'Utilità', 'Grafica'];
+        const categoryButtons = categories.map((cat, idx) =>
+            `<button class="app-store-category-btn${idx === 0 ? ' active' : ''}" onclick="app.filterAppStore('${cat}', '${windowId}')">${cat}</button>`
+        ).join('');
+
+        const appCards = apps.map(app => {
+            const isInstalled = installed.includes(app.id);
+            const stars = this.getStarsHTML(app.rating);
+            const btnClass = isInstalled ? 'open' : 'install';
+            const btnText = isInstalled ? 'Apri' : 'Installa';
+            const btnAction = isInstalled
+                ? `app.openApp('${app.id}')`
+                : `app.installApp('${app.id}', '${windowId}')`;
+            const extraBtn = isInstalled
+                ? `<button class="app-store-card-btn uninstall" onclick="app.uninstallApp('${app.id}', '${windowId}')">Disinstalla</button>`
+                : '';
+
+            return `
+                <div class="app-store-card">
+                    <div class="app-store-card-icon">${app.icon}</div>
+                    <div class="app-store-card-name">${app.name}</div>
+                    <div class="app-store-card-desc">${app.description}</div>
+                    <div class="app-store-card-meta">
+                        <span class="app-store-card-rating">${stars}</span>
+                        <span class="app-store-card-category">${app.category}</span>
+                    </div>
+                    <button class="app-store-card-btn ${btnClass}" onclick="${btnAction}">${btnText}</button>
+                    ${extraBtn}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="app-store-container" id="app-store-container-${windowId}">
+                <div class="app-store-header">
+                    <input type="text" class="app-store-search" id="app-store-search-${windowId}" placeholder="🔍 Cerca app..." oninput="app.searchAppStore(this.value, '${windowId}')">
+                    <div class="app-store-categories" id="app-store-categories-${windowId}">
+                        ${categoryButtons}
+                    </div>
+                </div>
+                <div class="app-store-featured" id="app-store-featured-${windowId}" onclick="app.openApp('${featuredApp.id}')">
+                    <div class="app-store-featured-icon">${featuredApp.icon}</div>
+                    <div class="app-store-featured-info">
+                        <div class="app-store-featured-name">${featuredApp.name}</div>
+                        <div class="app-store-featured-desc">${featuredApp.description}</div>
+                        <div class="app-store-featured-rating">${featuredStars} ${featuredApp.rating}.0</div>
+                    </div>
+                    <button class="app-store-featured-btn" onclick="event.stopPropagation(); app.installApp('${featuredApp.id}', '${windowId}')">${installed.includes(featuredApp.id) ? 'Apri' : 'Installa'}</button>
+                </div>
+                <div class="app-store-grid" id="app-store-grid-${windowId}">
+                    ${appCards}
+                </div>
+            </div>
+        `;
+    }
+
+    getStarsHTML(rating) {
+        const full = Math.floor(rating);
+        const half = rating % 1 >= 0.5 ? 1 : 0;
+        const empty = 5 - full - half;
+        return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+    }
+
+    initAppStore(windowId) {
+        this.appStoreState = this.appStoreState || {};
+        this.appStoreState[windowId] = {
+            currentCategory: 'Tutte',
+            searchQuery: '',
+        };
+    }
+
+    renderAppStore(windowId) {
+        const installed = this.getInstalledApps();
+        const apps = this.getAppStoreApps();
+        const state = this.appStoreState[windowId] || { currentCategory: 'Tutte', searchQuery: '' };
+
+        let filtered = apps;
+        if (state.currentCategory !== 'Tutte') {
+            filtered = filtered.filter(a => a.category === state.currentCategory);
+        }
+        if (state.searchQuery) {
+            const q = state.searchQuery.toLowerCase().trim();
+            filtered = filtered.filter(a =>
+                a.name.toLowerCase().includes(q) ||
+                a.description.toLowerCase().includes(q) ||
+                a.category.toLowerCase().includes(q)
+            );
+        }
+
+        const grid = document.getElementById(`app-store-grid-${windowId}`);
+        if (!grid) return;
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '<div class="app-store-no-results">Nessuna app trovata</div>';
+            return;
+        }
+
+        grid.innerHTML = filtered.map(app => {
+            const isInstalled = installed.includes(app.id);
+            const stars = this.getStarsHTML(app.rating);
+            const btnClass = isInstalled ? 'open' : 'install';
+            const btnText = isInstalled ? 'Apri' : 'Installa';
+            const btnAction = isInstalled
+                ? `app.openApp('${app.id}')`
+                : `app.installApp('${app.id}', '${windowId}')`;
+            const extraBtn = isInstalled
+                ? `<button class="app-store-card-btn uninstall" onclick="app.uninstallApp('${app.id}', '${windowId}')">Disinstalla</button>`
+                : '';
+
+            return `
+                <div class="app-store-card">
+                    <div class="app-store-card-icon">${app.icon}</div>
+                    <div class="app-store-card-name">${app.name}</div>
+                    <div class="app-store-card-desc">${app.description}</div>
+                    <div class="app-store-card-meta">
+                        <span class="app-store-card-rating">${stars}</span>
+                        <span class="app-store-card-category">${app.category}</span>
+                    </div>
+                    <button class="app-store-card-btn ${btnClass}" onclick="${btnAction}">${btnText}</button>
+                    ${extraBtn}
+                </div>
+            `;
+        }).join('');
+    }
+
+    filterAppStore(category, windowId) {
+        if (!this.appStoreState[windowId]) {
+            this.appStoreState[windowId] = { currentCategory: 'Tutte', searchQuery: '' };
+        }
+        this.appStoreState[windowId].currentCategory = category;
+
+        const container = document.getElementById(`app-store-categories-${windowId}`);
+        if (container) {
+            container.querySelectorAll('.app-store-category-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === category);
+            });
+        }
+
+        this.renderAppStore(windowId);
+    }
+
+    searchAppStore(query, windowId) {
+        if (!this.appStoreState[windowId]) {
+            this.appStoreState[windowId] = { currentCategory: 'Tutte', searchQuery: '' };
+        }
+        this.appStoreState[windowId].searchQuery = query;
+        this.renderAppStore(windowId);
+    }
+
+    addStartMenuItem(appId) {
+        const appData = this.getAppStoreApps().find(a => a.id === appId);
+        if (!appData) return;
+        const container = document.getElementById('start-menu-items');
+        if (!container) return;
+        const existing = container.querySelector(`[data-app-id="${appId}"]`);
+        if (existing) {
+            existing.style.display = '';
+            return;
+        }
+        const separator = container.querySelector('.start-menu-separator');
+        const btn = document.createElement('button');
+        btn.className = 'start-menu-item';
+        btn.dataset.appId = appId;
+        btn.onclick = () => this.openApp(appId);
+        btn.innerHTML = `
+            <span class="start-menu-icon">${appData.icon}</span>
+            <span>${appData.name}</span>
+        `;
+        if (separator) {
+            container.insertBefore(btn, separator);
+        } else {
+            container.appendChild(btn);
+        }
+    }
+
+    removeStartMenuItem(appId) {
+        const container = document.getElementById('start-menu-items');
+        if (!container) return;
+        const btn = container.querySelector(`[data-app-id="${appId}"]`);
+        if (btn) {
+            btn.style.display = 'none';
         }
     }
 }
