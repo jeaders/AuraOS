@@ -1,6 +1,6 @@
 #!/bin/bash
 # AuraOS Real Distro Build Script
-# Hybrid BIOS+UEFI ISO for MacBook Pro 2011 and old PCs
+# Hybrid BIOS+UEFI ISO for old PCs and modern hardware
 
 set -e
 
@@ -10,7 +10,7 @@ BUILD_DIR="/tmp/auraos-build"
 ISO_OUTPUT="${DISTRO_DIR}/AuraOS-1.0-amd64.iso"
 
 echo "=== AuraOS Real Distro Build ==="
-echo "Target: MacBook Pro 2011, old PCs, low-RAM systems"
+echo "Target: old PCs, low-RAM systems, modern x86_64 hardware"
 echo ""
 
 # Clean previous build
@@ -156,6 +156,6 @@ echo ""
 echo "Write to USB:"
 echo "  sudo dd if=${ISO_OUTPUT} of=/dev/sdX bs=4M status=progress && sync"
 echo ""
-echo "Boot on MacBook Pro 2011:"
-echo "  Hold Option key at boot, select USB drive"
+echo "Boot from USB:"
+echo "  Use BIOS/UEFI boot menu (F12, Esc, Option, etc.)"
 echo ""

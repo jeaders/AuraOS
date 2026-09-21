@@ -1,25 +1,25 @@
 # AuraOS Real Distro
 
 **AuraOS** è una distribuzione Linux reale, leggera e moderna, basata su Debian Bookworm. È progettata per:
-- **MacBook Pro 2011** (Intel HD 3000 / AMD Radeon HD 6750M)
 - **Vecchi PC** non adatti a sistemi operativi moderni
 - **Computer con problemi** con OS recenti
-- **8GB di RAM** o meno
+- **Sistemi a bassa RAM**
+- **Hardware x86_64** generico Intel/AMD
 
 ## Caratteristiche
 
 ### Sistema Operativo Reale
 - **Debian Bookworm** base (stabile e sicura)
-- **Kernel Linux 6.x** con parametri ottimizzati per MacBook 2011
+- **Kernel Linux 6.x** con supporto per hardware legacy e moderno
 - **GRUB 2** con ISO ibrida BIOS+UEFI
 - **XFCE 4** desktop environment (leggero e veloce)
 - **systemd** init system
 - **LightDM** display manager con autologin
 
 ### Compatibilità Hardware
-- **MacBook Pro 2011**: Intel HD 3000, AMD Radeon HD 6750M, WiFi Broadcom, trackpad Apple
-- **Vecchi PC**: Supporto per hardware legacy, Intel/AMD GPU, audio integrato
-- **8GB RAM**: Ottimizzato per funzionare con 2GB minimo, 8GB raccomandato
+- **GPU Intel/AMD/NVIDIA**: supporto base con driver open source
+- **Hardware legacy**: BIOS e UEFI, GPU più vecchie, audio integrato
+- **RAM**: Ottimizzato per funzionare con 2GB minimo, 8GB raccomandato
 
 ### Software Preinstallato
 
@@ -57,13 +57,14 @@
 - Thunar (file manager)
 - Hardinfo
 
-**Drivers MacBook Pro 2011:**
-- `firmware-b43-installer` - WiFi Broadcom
-- `apple-gmux` - GPU switching
-- `acpi-call-dkms` - power management
+**Drivers e firmware:**
+- `firmware-linux` / `firmware-linux-nonfree` - firmware generico
+- `firmware-misc-nonfree` - firmware aggiuntivo
 - `intel-microcode` - CPU microcode
-- `mesa-va-drivers` - Intel HD 3000 acceleration
-- `tlp` - battery optimization
+- `mesa-va-drivers` / `mesa-vdpau-drivers` - accelerazione video
+- Driver X.Org per Intel, AMD, NVIDIA, VESA, fbdev
+- `tlp` - risparmio energetico su laptop
+- `firmware-b43-installer` / `broadcom-sta-dkms` - WiFi Broadcom
 
 ### AuraOS Desktop Overlay
 - **Chromium kiosk mode** con interfaccia web moderna
@@ -87,7 +88,7 @@
 - CPU: Intel Core 2 Duo o superiore
 - RAM: 4GB o più
 - Disco: SSD 32GB+
-- GPU: Intel HD 3000 / AMD Radeon / NVIDIA (con driver open source)
+- GPU: Intel HD 3000 / AMD Radeon / NVIDIA / generiche (con driver open source)
 
 ## Download
 
@@ -109,7 +110,7 @@ sha256sum -c AuraOS-1.0-amd64.iso.sha256
    ```
 
 2. Boot da USB:
-   - **MacBook Pro 2011**: Tieni premuto `Option` all'avvio, seleziona USB
+   - **Mac**: Tieni premuto `Option` all'avvio, seleziona USB
    - **PC**: Entra nel BIOS/UEFI (F2, F12, Canc), seleziona boot da USB
 
 3. Scegli "Installa AuraOS" dal menu GRUB
@@ -121,14 +122,6 @@ sha256sum -c AuraOS-1.0-amd64.iso.sha256
    - Attendi installazione (~10-20 minuti)
 
 5. Riavvia e rimuovi USB
-
-### Installazione su MacBook Pro 2011
-
-1. Riduci la partizione macOS da macOS stesso (Disk Utility)
-2. Crea USB avviabile di AuraOS
-3. Boot da USB con tasto Option
-4. Installa nello spazio libero
-5. GRUB rileverà automaticamente macOS (dual boot)
 
 ## Build da Sorgente
 
@@ -190,13 +183,12 @@ alsamixer
 speaker-test -c 2
 ```
 
-### Grafica MacBook Pro 2011
+### Grafica e video
 ```bash
-# Forza Intel GPU (se problemi con AMD)
+# Se hai problemi di schermata nera
+# Prova modalità "Safe Mode" da GRUB o parametri nomodeset
 sudo nano /etc/default/grub
-# Aggiungi: GRUB_CMDLINE_LINUX_DEFAULT="radeon.runpm=0 acpi_backlight=vendor"
-
-# Aggiorna GRUB
+# Aggiungi parametri se necessario
 sudo update-grub
 ```
 
@@ -224,8 +216,6 @@ sudo apt autoremove
 ```
 
 ## Troubleshooting
-
-### MacBook Pro 2011
 
 **WiFi non funziona:**
 ```bash
@@ -268,7 +258,7 @@ AuraOS/
 ├── distro/                  # Real distro build system
 │   ├── build.sh            # Main build script
 │   ├── kernel/
-│   │   └── config          # Kernel config for MacBook/old PCs
+│   │   └── config          # Kernel config for broad x86_64 support
 │   ├── boot/
 │   │   └── grub/
 │   │       ├── grub.cfg    # GRUB config

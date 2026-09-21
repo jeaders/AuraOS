@@ -1,5 +1,5 @@
 # AuraOS base packages for real distro
-# Lightweight but functional for old PCs and MacBook Pro 2011
+# Lightweight but functional for old PCs and modern x86_64 hardware
 
 # Base system
 debootstrap
@@ -77,7 +77,7 @@ ncdu
 rclone
 deja-dup
 
-# Drivers: MacBook Pro 2011 and generic old hardware
+# Drivers: generic old and modern x86_64 hardware
 firmware-linux
 firmware-linux-nonfree
 firmware-misc-nonfree

@@ -1,5 +1,5 @@
-# AuraOS kernel config for MacBook Pro 2011 and old PCs
-# Target: Intel HD 3000 / AMD Radeon HD 6750M, 8GB RAM, x86_64
+# AuraOS kernel config for broad x86_64 hardware support
+# Target: old PCs, low-RAM systems, modern x86_64 hardware
 
 CONFIG_64BIT=y
 CONFIG_X86_64=y
@@ -270,7 +270,7 @@ CONFIG_ACPI_PROCESSOR_PBD=y
 CONFIG_ACPI_PROCESSOR_PBE=y
 CONFIG_ACPI_PROCESSOR_PBF=y
 
-# MacBook specific
+# Wireless and device support
 CONFIG_CFG80211=y
 CONFIG_CFG80211_WEXT=y
 
