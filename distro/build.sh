@@ -38,7 +38,7 @@ sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
     apt-get update
     apt-get install -y linux-image-amd64 linux-headers-amd64
     apt-get install -y $(grep -v '^#' /usr/share/auraos/packages/base.list | xargs)
-    apt-get install -y squashfs-tools
+    apt-get install -y squashfs-tools live-boot live-config
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 "
@@ -50,13 +50,11 @@ sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
 
     mkdir -p /etc/initramfs-tools/conf.d
 
-    # Ensure squashfs and loop modules are included in initramfs
     {
         echo 'squashfs'
         echo 'loop'
     } >> /etc/initramfs-tools/modules
 
-    # Disable resume if no swap is configured
     echo 'RESUME=none' > /etc/initramfs-tools/conf.d/resume
 
     update-initramfs -c -k all
@@ -160,7 +158,37 @@ cp -r /usr/lib/grub/x86_64-efi/* "${ISO_DIR}/boot/grub/x86_64-efi/"
 
 # Create hybrid ISO with GRUB
 echo "Creating hybrid ISO with GRUB..."
-sudo grub-mkrescue -o "${ISO_OUTPUT}" "${ISO_DIR}"
+sudo grub-mkstandalone \
+    -O i386-pc \
+    -o "${ISO_DIR}/boot/grub/i386-pc/eltorito.img" \
+    --locales="" \
+    --fonts="" \
+    "boot/grub/grub.cfg=${SCRIPT_DIR}/boot/grub/grub.cfg"
+
+sudo grub-mkstandalone \
+    -O x86_64-efi \
+    -o "${ISO_DIR}/boot/grub/x86_64-efi/efi.img" \
+    --locales="" \
+    --fonts="" \
+    "boot/grub/grub.cfg=${SCRIPT_DIR}/boot/grub/grub.cfg"
+
+sudo xorriso -as mkisofs \
+    -iso-level 3 \
+    -full-iso9660-filenames \
+    -volid "AuraOS" \
+    -output "${ISO_OUTPUT}" \
+    -eltorito-boot boot/grub/i386-pc/eltorito.img \
+    -eltorito-catalog boot/grub/i386-pc/boot.catalog \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    -eltorito-alt-boot \
+    -e boot/grub/x86_64-efi/efi.img \
+    -no-emul-boot \
+    -append_partition 2 0xEF boot/grub/x86_64-efi/efi.img \
+    "${ISO_DIR}/"
+
+sudo isohybrid --uefi "${ISO_OUTPUT}"
 
 # Generate checksum
 sha256sum "${ISO_OUTPUT}" > "${ISO_OUTPUT}.sha256"

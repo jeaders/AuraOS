@@ -112,6 +112,8 @@ apt-transport-https
 software-properties-common
 pkg-config
 build-essential
+live-boot
+live-config
 
 # App store infrastructure
 apt-xapian-index
