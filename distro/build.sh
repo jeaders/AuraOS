@@ -26,8 +26,8 @@ sudo debootstrap --arch=amd64 --variant=minbase \
 
 # Step 2: Copy AuraOS configuration
 echo "[2/6] Copying AuraOS configuration..."
-sudo cp -r "${DISTRO_DIR}/debian/etc" "${BUILD_DIR}/rootfs/"
-sudo cp -r "${DISTRO_DIR}/debian/usr" "${BUILD_DIR}/rootfs/"
+sudo cp -r "${SCRIPT_DIR}/debian/etc" "${BUILD_DIR}/rootfs/"
+sudo cp -r "${SCRIPT_DIR}/debian/boot" "${BUILD_DIR}/rootfs/"
 
 # Step 3: Install packages
 echo "[3/6] Installing packages..."
@@ -101,7 +101,7 @@ cp "${BUILD_DIR}/rootfs/boot/initrd.img-"* "${ISO_DIR}/live/initrd.img"
 cp "${BUILD_DIR}/filesystem.squashfs" "${ISO_DIR}/live/"
 
 # Copy GRUB config
-cp "${DISTRO_DIR}/boot/grub/grub.cfg" "${ISO_DIR}/boot/grub/grub.cfg"
+cp "${SCRIPT_DIR}/boot/grub/grub.cfg" "${ISO_DIR}/boot/grub/grub.cfg"
 
 # Copy GRUB modules for hybrid BIOS+UEFI
 cp -r /usr/lib/grub/i386-pc/* "${ISO_DIR}/boot/grub/i386-pc/"

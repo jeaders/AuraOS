@@ -25,6 +25,8 @@ jobs:
       - run: bash -n distro/scripts/install.sh
       - run: bash -n distro/scripts/post-install.sh
       - run: bash -n distro/scripts/live.sh
+      - run: test -d distro/debian/etc && echo "debian etc OK"
+      - run: test -d distro/debian/boot && echo "debian boot OK"
       - run: test -f distro/kernel/config && echo "kernel config OK"
       - run: test -f distro/boot/grub/grub.cfg && echo "grub config OK"
       - run: test -f distro/packages/base.list && echo "package list OK"
