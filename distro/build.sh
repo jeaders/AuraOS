@@ -138,35 +138,9 @@ cp "${SCRIPT_DIR}/boot/grub/grub.cfg" "${ISO_DIR}/boot/grub/grub.cfg"
 cp -r /usr/lib/grub/i386-pc/* "${ISO_DIR}/boot/grub/i386-pc/"
 cp -r /usr/lib/grub/x86_64-efi/* "${ISO_DIR}/boot/grub/x86_64-efi/"
 
-# Create EFI image for UEFI boot
-echo "Creating EFI image..."
-dd if=/dev/zero of="${ISO_DIR}/boot/grub/x86_64-efi/efi.img" bs=1M count=10 2>/dev/null
-mkfs.fat -F 32 "${ISO_DIR}/boot/grub/x86_64-efi/efi.img" 2>/dev/null || true
-sudo mkdir -p /mnt/auraos-efi
-sudo mount -o loop "${ISO_DIR}/boot/grub/x86_64-efi/efi.img" /mnt/auraos-efi 2>/dev/null || true
-sudo cp -r /usr/lib/grub/x86_64-efi/* /mnt/auraos-efi/ 2>/dev/null || true
-sudo umount /mnt/auraos-efi 2>/dev/null || true
-rmdir /mnt/auraos-efi 2>/dev/null || true
-
-# Create ISO with xorriso for hybrid support
-sudo xorriso -as mkisofs \
-    -iso-level 3 \
-    -full-iso9660-filenames \
-    -volid "AuraOS" \
-    -output "${ISO_OUTPUT}" \
-    -eltorito-boot boot/grub/i386-pc/eltorito.img \
-    -eltorito-catalog boot/grub/i386-pc/boot.catalog \
-    -no-emul-boot \
-    -boot-load-size 4 \
-    -boot-info-table \
-    -eltorito-alt-boot \
-    -e boot/grub/x86_64-efi/efi.img \
-    -no-emul-boot \
-    -append_partition 2 0xEF boot/grub/x86_64-efi/efi.img \
-    "${ISO_DIR}/"
-
-# Make ISO hybrid bootable
-sudo isohybrid --uefi "${ISO_OUTPUT}"
+# Create hybrid ISO with GRUB
+echo "Creating hybrid ISO with GRUB..."
+sudo grub-mkrescue -o "${ISO_OUTPUT}" "${ISO_DIR}"
 
 # Generate checksum
 sha256sum "${ISO_OUTPUT}" > "${ISO_OUTPUT}.sha256"
