@@ -97,7 +97,6 @@ brightnessctl
 tlp
 tlp-rdw
 thermald
-acpi-call-dkms
 firmware-b43-installer
 broadcom-sta-dkms
 
