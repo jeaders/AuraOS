@@ -103,6 +103,8 @@ broadcom-sta-dkms
 
 # System
 sudo
+passwd
+netbase
 locales
 tzdata
 ca-certificates

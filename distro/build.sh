@@ -45,12 +45,18 @@ sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
 echo "[4/6] Configuring system..."
 sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
     export DEBIAN_FRONTEND=noninteractive
-    
-    # Locale
-    echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
-    echo 'it_IT.UTF-8 UTF-8' >> /etc/locale.gen
-    locale-gen
-    update-locale LANG=en_US.UTF-8
+
+    # Ensure groups referenced by useradd exist
+    groupadd -f netdev
+    groupadd -f audio
+    groupadd -f video
+    groupadd -f plugdev
+
+    # Create the user only if it does not already exist
+    if ! id -u auraos >/dev/null 2>&1; then
+        useradd -m -s /bin/bash -G sudo,netdev,audio,video,plugdev auraos
+        printf '%s\n' 'auraos:auraos' | chpasswd
+    fi
 
     # Timezone
     ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
@@ -68,19 +74,30 @@ ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 HOSTSEOF
 
-    # Network
-    systemctl enable NetworkManager
+    # Locales
+    if command -v locale-gen >/dev/null 2>&1; then
+        sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen || true
+        sed -i 's/^# *it_IT.UTF-8 UTF-8/it_IT.UTF-8 UTF-8/' /etc/locale.gen || true
+        locale-gen || true
+    fi
 
-    # LightDM
-    systemctl enable lightdm
+    if command -v update-locale >/dev/null 2>&1; then
+        update-locale LANG=en_US.UTF-8 || true
+    fi
 
-    # Create user
-    useradd -m -s /bin/bash -G sudo,audio,video,plugdev,netdev auraos
-    echo 'auraos:auraos' | chpasswd
+    # Enable services only if unit files exist
+    enable_if_present() {
+        if command -v systemctl >/dev/null 2>&1; then
+            if [ -f /lib/systemd/system/\$1 ] || [ -f /usr/lib/systemd/system/\$1 ]; then
+                systemctl enable \$1 || true
+            fi
+        fi
+    }
 
-    # Enable services
-    systemctl enable geoclue
-    systemctl enable fwupd
+    enable_if_present NetworkManager.service
+    enable_if_present lightdm.service
+    enable_if_present geoclue.service
+    enable_if_present fwupd.service
 "
 
 # Step 5: Build squashfs
