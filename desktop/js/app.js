@@ -2,8 +2,6 @@
 class AuraOSApp {
     constructor() {
         this.state = {
-            profile: localStorage.getItem('auraos_profile') || null,
-            userMode: localStorage.getItem('auraos_mode') || 'adulto',
             iconSize: localStorage.getItem('auraos_iconSize') || 'medium',
             wallpaper: localStorage.getItem('auraos_wallpaper') || 'gradient',
             soundsEnabled: (localStorage.getItem('auraos_sounds')) !== 'false',
@@ -106,14 +104,10 @@ class AuraOSApp {
         this.updateClock();
         setInterval(() => this.updateClock(), 1000);
         this.updateNotificationBadge();
-        if (this.state.profile) {
-            if (this.state.passwordEnabled) {
-                this.showLoginScreen();
-            } else {
-                this.boot();
-            }
+        if (this.state.passwordEnabled) {
+            this.showLoginScreen();
         } else {
-            this.showProfileSelection();
+            this.showBootScreen();
         }
     }
 
@@ -164,8 +158,7 @@ class AuraOSApp {
         if (loginScreen) {
             loginScreen.classList.remove('hidden');
             document.getElementById('login-user-name').textContent = 
-                this.state.profile === 'bambino' ? 'Bambino' : 
-                this.state.profile === 'adulto' ? 'Adulto' : 'Anziano';
+                '👤 Utente';
             setTimeout(() => {
                 const input = document.getElementById('login-password');
                 if (input) input.focus();
@@ -378,36 +371,38 @@ class AuraOSApp {
     }
 
     // ===== Boot Sequence =====
-    showProfileSelection() {
+    showBootScreen() {
         const bootScreen = document.getElementById('boot-screen');
         const progressBar = document.getElementById('boot-progress-bar');
-        const profileSelect = document.getElementById('profile-select');
+        const bootStatus = document.getElementById('boot-status');
         let progress = 0;
+        const messages = [
+            'Caricamento kernel...',
+            'Inizializzazione sistema...',
+            'Caricamento driver...',
+            'Avvio servizi...',
+            'Preparazione desktop...'
+        ];
+        let messageIndex = 0;
         const interval = setInterval(() => {
-            progress += Math.random() * 30;
+            progress += Math.random() * 25 + 10;
             if (progress > 100) progress = 100;
             progressBar.style.width = progress + '%';
             if (progress >= 100) {
                 clearInterval(interval);
+                bootStatus.textContent = 'Accesso...';
                 setTimeout(() => {
-                    profileSelect.style.display = 'block';
-                }, 300);
+                    bootScreen.classList.add('fade-out');
+                    setTimeout(() => {
+                        bootScreen.classList.add('hidden');
+                        this.boot();
+                    }, 800);
+                }, 500);
+            } else if (Math.floor(progress) % 20 === 0 && messageIndex < messages.length - 1) {
+                messageIndex++;
+                bootStatus.textContent = messages[messageIndex];
             }
-        }, 200);
-    }
-
-    selectProfile(profile) {
-        this.state.profile = profile;
-        this.state.userMode = profile;
-        localStorage.setItem('auraos_profile', profile);
-        localStorage.setItem('auraos_mode', profile);
-        const bootScreen = document.getElementById('boot-screen');
-        bootScreen.classList.add('fade-out');
-        setTimeout(() => {
-            bootScreen.classList.add('hidden');
-            this.boot();
-        }, 800);
-        this.addNotification('Accesso effettuato', `Profilo "${profile}" selezionato.`, 'success');
+        }, 300);
     }
 
     boot() {
@@ -422,12 +417,7 @@ class AuraOSApp {
         desktop.classList.remove('hidden');
         if (topBar) topBar.classList.remove('hidden');
         if (dock) dock.classList.remove('hidden');
-        const names = {
-            bambino: '👦 Bambino',
-            adulto: '👤 Utente',
-            anziano: '👴 Nonno'
-        };
-        startMenuUser.textContent = names[this.state.profile] || '👤 Utente';
+        startMenuUser.textContent = '👤 Utente';
         this.applySettings();
         this.updateTopBar();
         this.updateDock();
@@ -436,13 +426,113 @@ class AuraOSApp {
         this.initWeatherWidget();
         this.initParallax();
         this.initClockWidget();
+        this.initQuickSettings();
+        this.initDashboard();
         setTimeout(() => {
-            this.showTutorMessage('Ciao! Benvenuto in AuraOS! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare un tour, oppure esplora pure le app!');
+            this.showTutorMessage('Benvenuto in AuraOS! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare, oppure esplora il desktop.');
         }, 1000);
-        if (this.state.userMode === 'anziano') {
-            const voiceBtn = document.getElementById('voice-btn');
-            if (voiceBtn) voiceBtn.classList.remove('hidden');
-        }
+    }
+
+    initQuickSettings() {
+        const existing = document.getElementById('quick-settings');
+        if (existing) existing.remove();
+        const qs = document.createElement('div');
+        qs.id = 'quick-settings';
+        qs.className = 'quick-settings hidden';
+        qs.innerHTML = `
+            <div class="quick-settings-panel">
+                <div class="quick-settings-item" onclick="app.toggleWifi()">
+                    <span class="quick-settings-icon">📶</span>
+                    <span>WiFi</span>
+                </div>
+                <div class="quick-settings-item" onclick="app.toggleBluetooth()">
+                    <span class="quick-settings-icon">🔵</span>
+                    <span>Bluetooth</span>
+                </div>
+                <div class="quick-settings-item" onclick="app.toggleDarkMode()">
+                    <span class="quick-settings-icon">🌙</span>
+                    <span>Dark Mode</span>
+                </div>
+                <div class="quick-settings-item" onclick="app.toggleDoNotDisturb()">
+                    <span class="quick-settings-icon">🔕</span>
+                    <span>Non disturbare</span>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(qs);
+    }
+
+    initDashboard() {
+        const existing = document.getElementById('dashboard');
+        if (existing) existing.remove();
+        const dashboard = document.createElement('div');
+        dashboard.id = 'dashboard';
+        dashboard.className = 'dashboard hidden';
+        dashboard.innerHTML = `
+            <div class="dashboard-content">
+                <div class="dashboard-widget">
+                    <h3>📊 Sistema</h3>
+                    <div class="dashboard-widget-content">
+                        <p><strong>OS:</strong> AuraOS 1.0</p>
+                        <p><strong>Kernel:</strong> Linux 6.1</p>
+                        <p><strong>Desktop:</strong> AuraOS Desktop</p>
+                    </div>
+                </div>
+                <div class="dashboard-widget">
+                    <h3>⚡ Prestazioni</h3>
+                    <div class="dashboard-widget-content">
+                        <div class="dashboard-stat">
+                            <span>CPU</span>
+                            <div class="dashboard-stat-bar"><div class="dashboard-stat-fill" style="width: 45%"></div></div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <span>RAM</span>
+                            <div class="dashboard-stat-bar"><div class="dashboard-stat-fill" style="width: 62%"></div></div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <span>Disco</span>
+                            <div class="dashboard-stat-bar"><div class="dashboard-stat-fill" style="width: 38%"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-widget">
+                    <h3>🌤️ Meteo</h3>
+                    <div class="dashboard-widget-content" id="dashboard-weather">
+                        <p>Caricamento...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dashboard);
+    }
+
+    toggleQuickSettings() {
+        const qs = document.getElementById('quick-settings');
+        if (qs) qs.classList.toggle('hidden');
+    }
+
+    toggleDashboard() {
+        const dashboard = document.getElementById('dashboard');
+        if (dashboard) dashboard.classList.toggle('hidden');
+    }
+
+    toggleWifi() {
+        this.showToast('Rete', 'WiFi: simulato in questa versione', 'info', 2000);
+    }
+
+    toggleBluetooth() {
+        this.showToast('Bluetooth', 'Bluetooth: simulato in questa versione', 'info', 2000);
+    }
+
+    toggleDarkMode() {
+        const body = document.body;
+        body.classList.toggle('dark-theme');
+        const isDark = body.classList.contains('dark-theme');
+        this.showToast('Tema', isDark ? 'Modalità scura attivata' : 'Modalità chiara attivata', 'info', 2000);
+    }
+
+    toggleDoNotDisturb() {
+        this.showToast('Non disturbare', 'Modalità non disturbare attivata', 'info', 2000);
     }
 
     initParallax() {
@@ -476,14 +566,7 @@ class AuraOSApp {
                 icon.classList.add(`size-${this.state.iconSize}`);
             }
         });
-        if (this.state.userMode === 'bambino') {
-            document.body.style.fontSize = '16px';
-        } else if (this.state.userMode === 'anziano') {
-            document.body.style.fontSize = '18px';
-            document.getElementById('voice-btn').classList.remove('hidden');
-        } else {
-            document.body.style.fontSize = '14px';
-        }
+        document.body.style.fontSize = '14px';
     }
 
     // ===== Desktop =====
@@ -646,7 +729,7 @@ class AuraOSApp {
                 <h3 style="color: #667eea; margin-bottom: 15px;">ℹ️ Proprietà del sistema</h3>
                 <div style="background: #f7fafc; padding: 15px; border-radius: 8px; line-height: 2;">
                     <p><strong>Sistema:</strong> AuraOS v1.0</p>
-                    <p><strong>Utente:</strong> ${this.state.profile || 'Non selezionato'}</p>
+                    <p><strong>Utente:</strong> ${'auraos'}</p>
                     <p><strong>Modalità:</strong> ${this.state.userMode}</p>
                     <p><strong>Sfondo:</strong> ${this.state.wallpaper}</p>
                     <p><strong>Icone:</strong> ${this.state.iconSize}</p>
@@ -1477,7 +1560,7 @@ class AuraOSApp {
                 break;
             }
             case 'whoami':
-                this.terminalPrint(windowId, this.state.profile || 'utente', 'output');
+                this.terminalPrint(windowId, 'auraos', 'output');
                 break;
 
             case 'date':
@@ -1558,7 +1641,7 @@ class AuraOSApp {
         ];
         lines.forEach(l => this.terminalPrint(windowId, l.text, l.type));
         this.terminalPrint(windowId, '', 'blank');
-        const user = this.state.profile || 'utente';
+        const user = 'auraos';
         const hostname = 'auraos';
         const os = 'AuraOS v1.0';
         const kernel = '5.15.0-auraos';
@@ -2782,7 +2865,7 @@ class AuraOSApp {
                 <ul style="margin-left: 20px; line-height: 2;">
                     <li>Non dare il tuo nome o indirizzo a sconosciuti</li>
                     <li>Non scaricare file da persone che non conosci</li>
-                    <li>Se vedi qualcosa che non ti piace, chiudi la pagina e chiedi a un adulto</li>
+                    
                     <li>Ricorda: Internet è come il mondo reale, ci sono persone gentili e persone meno gentili</li>
                 </ul>
                 <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
@@ -2820,7 +2903,7 @@ class AuraOSApp {
                     <li>Non aprire allegati email da persone che non conosci</li>
                     <li>Tieni il computer aggiornato</li>
                     <li>Usa un programma antivirus se disponibile</li>
-                    <li>Chiedi a un adulto se vedi qualcosa di strano</li>
+                    
                 </ul>
                 <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
             `,
@@ -2836,7 +2919,7 @@ class AuraOSApp {
                 <p><strong>Cose importanti da sapere:</strong></p>
                 <ul style="margin-left: 20px; line-height: 2;">
                     <li>Per vedere video in streaming serve una buona connessione Internet</li>
-                    <li>Alcuni contenuti sono per adulti: chiedi a un adulto prima di guardare</li>
+                    
                     <li>Non tutti i video sono veri: impara a riconoscere le bufale!</li>
                 </ul>
                 <p style="margin-top: 20px;"><a onclick="app.navigateBrowser('home')">← Torna alla home</a></p>
@@ -2850,7 +2933,7 @@ class AuraOSApp {
                     <li>Non scaricare programmi da siti sconosciuti</li>
                     <li>Fai attenzione ai file .exe - sono programmi che possono contenere virus</li>
                     <li>Controlla sempre che il file sia quello che ti aspetti</li>
-                    <li>Chiedi a un adulto prima di scaricare cose nuove</li>
+                    
                 </ul>
                 <p><strong>Tipi di file comuni:</strong></p>
                 <ul style="margin-left: 20px; line-height: 2;">
@@ -2918,7 +3001,7 @@ class AuraOSApp {
 
     // ===== Tutor App =====
     getTutorContent(windowId) {
-        const suggestions = this.tutorAI.getSuggestions(this.state.userMode);
+        const suggestions = this.tutorAI.getSuggestions('adulto');
         return `
             <div class="tutor-chat">
                 <div class="tutor-messages" id="tutor-messages-${windowId}">
@@ -2951,7 +3034,7 @@ class AuraOSApp {
         userMsg.className = 'tutor-message user';
         userMsg.textContent = message;
         messagesContainer.appendChild(userMsg);
-        const response = this.tutorAI.getResponse(message, this.state.userMode);
+        const response = this.tutorAI.getResponse(message, 'adulto');
         setTimeout(() => {
             const tutorMsg = document.createElement('div');
             tutorMsg.className = 'tutor-message tutor';
@@ -3004,19 +3087,6 @@ class AuraOSApp {
     getSettingsContent(windowId) {
         return `
             ${this.getAppearanceContent(windowId)}
-
-            <div class="settings-section">
-                <h3>👤 Modalità</h3>
-                <div class="settings-option">
-                    <span class="settings-label">Modalità utente</span>
-                    <div class="settings-control">
-                        ${['bambino', 'adulto', 'anziano'].map(m => `
-                            <button class="settings-btn ${this.state.userMode === m ? 'active' : ''}"
-                                    onclick="app.setUserMode('${m}')">${m.charAt(0).toUpperCase() + m.slice(1)}</button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
 
             <div class="settings-section">
                 <h3>🔔 Suggerimenti Tutor</h3>
@@ -3098,8 +3168,7 @@ class AuraOSApp {
     }
 
     setUserMode(mode) {
-        this.state.userMode = mode;
-        localStorage.setItem('auraos_mode', mode);
+        
         this.applySettings();
         this.showToast('Modalità cambiata', `Modalità: "${mode}".`, 'success');
         this.addNotification('Modalità', `Modalità cambiata in "${mode}".`, 'info');

@@ -4,29 +4,35 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
 
-**AuraOS** è una **distribuzione Linux educativa** con ambiente desktop web-based. Ispirata da Zorin OS e altre distro user-friendly, AuraOS combina la potenza di Linux con un'interfaccia semplice e moderna.
+**AuraOS** è una **distribuzione Linux educativa** con ambiente desktop web-based moderno e innovativo. Ispirata da Zorin OS, elementary OS e GNOME, AuraOS combina la potenza di Linux con un'interfaccia desktop professionale, veloce e intuitiva.
 
 ## Caratteristiche
 
 ### Core OS
 - **Kernel Linux 6.1** personalizzato con branding AuraOS
-- **GRUB 2** con tema personalizzato
+- **GRUB 2** con tema personalizzato moderno
 - **Boot options**: Normale, Safe Mode, Text Mode
 - **Debian Bookworm** base (stabile e sicura)
 - **systemd** init system
-- **LightDM** display manager
+- **LightDM** display manager con autologin
 
 ### Desktop Environment
-- Interfaccia web-based (HTML/CSS/JS)
+- Interfaccia web-based (HTML/CSS/JS) con design **glassmorphism**
 - **Chromium** in kiosk mode come shell
-- Avvio automatico senza login
+- Boot screen moderno con barra di avanzamento
+- Login screen con password opzionale
+- Quick settings panel per controlli rapidi
+- Dashboard con statistiche sistema in tempo reale
 - Tutte le app: File Manager, Terminale, Browser, Tutor AI, Galleria, Musica, Calcolatrice
 
-### System
-- ext4 filesystem
-- NetworkManager per rete
-- ACPI per gestione energia
-- Supporto hardware desktop completo
+### Innovazione
+- **Design moderno**: Glassmorphism, animazioni fluide, transizioni smooth
+- **Quick Settings**: Accesso rapido a WiFi, Bluetooth, Dark Mode, Non disturbare
+- **Dashboard**: Widget sistema, prestazioni, meteo in tempo reale
+- **Tutor AI integrato**: Assistente educativo contestuale
+- **Multi-workspace**: Gestione spazi di lavoro multipli
+- **Notifiche intelligenti**: Centro notifiche con badge e toast
+- **Launcher globale**: Ricerca veloce app, file e impostazioni
 
 ## Anteprima
 
@@ -159,7 +165,7 @@ qemu-system-x86_64 -cdrom AuraOS-1.0.iso -m 2G
 
 ```
 +------------------+
-|   GRUB 2         |  <- Bootloader
+|   GRUB 2         |  <- Bootloader con tema moderno
 +------------------+
          |
 +------------------+
@@ -181,7 +187,7 @@ qemu-system-x86_64 -cdrom AuraOS-1.0.iso -m 2G
 +------------------+
          |
 +------------------+
-|   LightDM        |  <- Display manager
+|   LightDM        |  <- Display manager con autologin
 +------------------+
          |
 +------------------+
@@ -190,8 +196,11 @@ qemu-system-x86_64 -cdrom AuraOS-1.0.iso -m 2G
 +------------------+
          |
 +------------------+
-|   AuraOS Desktop |  <- Interfaccia web (HTML/CSS/JS)
-|   (index.html)   |     + App, finestre, filesystem virtuale
+|   AuraOS Desktop |  <- Interfaccia web moderna
+|   (index.html)   |     + Glassmorphism design
+|                  |     + Quick Settings
+|                  |     + Dashboard
+|                  |     + App, finestre, filesystem virtuale
 +------------------+
 ```
 

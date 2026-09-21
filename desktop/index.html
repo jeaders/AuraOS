@@ -18,7 +18,7 @@
     <div id="login-screen" class="login-screen hidden">
         <div class="login-content">
             <div class="login-logo">
-                <svg width="60" height="60" viewBox="0 0 80 80" fill="none">
+                <svg width="72" height="72" viewBox="0 0 80 80" fill="none">
                     <rect x="4" y="12" width="72" height="48" rx="8" stroke="white" stroke-width="3" fill="none"/>
                     <rect x="24" y="60" width="32" height="4" rx="2" fill="white"/>
                     <rect x="12" y="64" width="56" height="4" rx="2" fill="white"/>
@@ -26,13 +26,14 @@
                     <circle cx="40" cy="4" r="2" fill="white"/>
                 </svg>
             </div>
-            <h2 class="login-title">Accesso a AuraOS</h2>
-            <p class="login-user" id="login-user-name"></p>
+            <h2 class="login-title">AuraOS</h2>
+            <p class="login-subtitle">Accedi al tuo spazio</p>
             <div class="login-form">
                 <input type="password" id="login-password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')app.doLogin()">
                 <button class="login-btn" onclick="app.doLogin()">Accedi</button>
             </div>
             <p class="login-error hidden" id="login-error">Password errata</p>
+            <p class="login-hint" id="login-hint"></p>
         </div>
     </div>
 
@@ -48,27 +49,11 @@
                 </svg>
             </div>
             <h1 class="boot-title">AuraOS</h1>
-            <p class="boot-subtitle">Il tuo desktop virtuale, bello e semplice</p>
+            <p class="boot-subtitle">Sistema operativo moderno, veloce e open source</p>
             <div class="boot-progress">
                 <div class="boot-progress-bar" id="boot-progress-bar"></div>
             </div>
-            <div id="profile-select" class="profile-select" style="display:none;">
-                <p>Chi sei?</p>
-                <div class="profile-buttons">
-                    <button class="profile-btn" data-profile="bambino" onclick="app.selectProfile('bambino')">
-                        <span class="profile-icon">👦</span>
-                        <span>Bambino</span>
-                    </button>
-                    <button class="profile-btn" data-profile="adulto" onclick="app.selectProfile('adulto')">
-                        <span class="profile-icon">👤</span>
-                        <span>Adulto</span>
-                    </button>
-                    <button class="profile-btn" data-profile="anziano" onclick="app.selectProfile('anziano')">
-                        <span class="profile-icon">👴</span>
-                        <span>Anziano</span>
-                    </button>
-                </div>
-            </div>
+            <div class="boot-status" id="boot-status">Avvio in corso...</div>
         </div>
     </div>
 
@@ -94,6 +79,12 @@
         </button>
         <div id="top-bar-center" class="top-bar-center"></div>
         <div class="top-bar-right">
+            <button class="top-bar-icon-btn" id="top-quick-settings-btn" onclick="app.toggleQuickSettings()" title="Impostazioni rapide">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0-2.83l-.06-.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </button>
             <button class="top-bar-icon-btn" id="top-volume-btn" onclick="app.showToast('Volume', 'Controllo volume non disponibile in questa versione.', 'info', 2000)" title="Volume">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
