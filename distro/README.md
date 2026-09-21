@@ -1,37 +1,141 @@
 # AuraOS Real Distro
 
-This directory contains the files for building a **real Debian-based Linux distribution** that can be installed on real hardware, including MacBook Pro 2011.
+**AuraOS** è una distribuzione Linux reale, leggera e moderna, basata su Debian Bookworm. È progettata per:
+- **MacBook Pro 2011** (Intel HD 3000 / AMD Radeon HD 6750M)
+- **Vecchi PC** non adatti a sistemi operativi moderni
+- **Computer con problemi** con OS recenti
+- **8GB di RAM** o meno
 
-## Structure
+## Caratteristiche
 
-```
-distro/
-├── build.sh              # Main build script
-├── packages/             # Package lists
-│   ├── base.list        # Core system packages
-│   ├── desktop.list     # Desktop environment packages
-│   ├── internet.list    # Browser and networking
-│   ├── office.list      # Productivity apps
-│   ├── graphics.list    # Graphics software
-│   ├── multimedia.list  # Audio/video
-│   └── drivers.list     # MacBook Pro 2011 drivers
-├── scripts/
-│   ├── post-install.sh  # Post-installation setup
-│   └── auraos-setup.sh  # AuraOS configuration
-├── debian/
-│   ├── etc/             # System configuration
-│   └── usr/             # AuraOS overlay files
-└── patches/             # Custom patches
-```
+### Sistema Operativo Reale
+- **Debian Bookworm** base (stabile e sicura)
+- **Kernel Linux 6.x** con parametri ottimizzati per MacBook 2011
+- **GRUB 2** con ISO ibrida BIOS+UEFI
+- **XFCE 4** desktop environment (leggero e veloce)
+- **systemd** init system
+- **LightDM** display manager con autologin
 
-## Building the ISO
+### Compatibilità Hardware
+- **MacBook Pro 2011**: Intel HD 3000, AMD Radeon HD 6750M, WiFi Broadcom, trackpad Apple
+- **Vecchi PC**: Supporto per hardware legacy, Intel/AMD GPU, audio integrato
+- **8GB RAM**: Ottimizzato per funzionare con 2GB minimo, 8GB raccomandato
 
-### Prerequisites
+### Software Preinstallato
 
-You need a Debian/Ubuntu Linux system to build the ISO:
+**Internet:**
+- Chromium (browser primario)
+- Firefox ESR
+- Transmission (torrent)
+
+**Office:**
+- LibreOffice (Writer, Calc, Impress)
+- Evince (PDF viewer)
+- Image viewer
+
+**Graphics:**
+- GIMP (image editor)
+- Inkscape (vector graphics)
+- ImageMagick
+
+**Video/Audio:**
+- VLC (media player)
+- MPV
+- Audacity (audio editor)
+- FFmpeg
+
+**Development:**
+- Git
+- Vim, Nano
+- Python 3, pip
+- GCC/G++
+
+**Utilities:**
+- GParted (partition editor)
+- Disk utility
+- System monitor
+- Thunar (file manager)
+- Hardinfo
+
+**Drivers MacBook Pro 2011:**
+- `firmware-b43-installer` - WiFi Broadcom
+- `apple-gmux` - GPU switching
+- `acpi-call-dkms` - power management
+- `intel-microcode` - CPU microcode
+- `mesa-va-drivers` - Intel HD 3000 acceleration
+- `tlp` - battery optimization
+
+### AuraOS Desktop Overlay
+- **Chromium kiosk mode** con interfaccia web moderna
+- **Glassmorphism design** con animazioni fluide
+- **App Store** con 42+ applicazioni
+- **Terminale** con tab e AI assist
+- **Workspace switcher** visuale
+- **Widget desktop** interattivi (meteo, sistema, orologio)
+- **Centro notifiche** moderno
+- **Quick Settings** panel
+
+## Requisiti
+
+### Minimi
+- CPU: x86_64 (Intel o AMD)
+- RAM: 2GB minimo, 4GB raccomandato
+- Disco: 16GB minimo, 32GB raccomandato
+- BIOS o UEFI
+
+### Consigliati
+- CPU: Intel Core 2 Duo o superiore
+- RAM: 4GB o più
+- Disco: SSD 32GB+
+- GPU: Intel HD 3000 / AMD Radeon / NVIDIA (con driver open source)
+
+## Download
 
 ```bash
-# On Debian/Ubuntu
+# Scarica l'ISO
+wget https://github.com/jeaders/AuraOS/releases/download/v1.0/AuraOS-1.0-amd64.iso
+
+# Verifica checksum
+sha256sum -c AuraOS-1.0-amd64.iso.sha256
+```
+
+## Installazione
+
+### Da USB
+
+1. Crea USB avviabile:
+   ```bash
+   sudo dd if=AuraOS-1.0-amd64.iso of=/dev/sdX bs=4M status=progress && sync
+   ```
+
+2. Boot da USB:
+   - **MacBook Pro 2011**: Tieni premuto `Option` all'avvio, seleziona USB
+   - **PC**: Entra nel BIOS/UEFI (F2, F12, Canc), seleziona boot da USB
+
+3. Scegli "Installa AuraOS" dal menu GRUB
+
+4. Segui l'installer guidato:
+   - Seleziona disco di destinazione
+   - Partiziona automaticamente (GPT + ext4)
+   - Crea utente `auraos`
+   - Attendi installazione (~10-20 minuti)
+
+5. Riavvia e rimuovi USB
+
+### Installazione su MacBook Pro 2011
+
+1. Riduci la partizione macOS da macOS stesso (Disk Utility)
+2. Crea USB avviabile di AuraOS
+3. Boot da USB con tasto Option
+4. Installa nello spazio libero
+5. GRUB rileverà automaticamente macOS (dual boot)
+
+## Build da Sorgente
+
+### Prerequisiti
+
+```bash
+# Su Debian/Ubuntu
 sudo apt-get install -y \
     debootstrap \
     squashfs-tools \
@@ -41,7 +145,8 @@ sudo apt-get install -y \
     xorriso \
     qemu-system-x86 \
     qemu-utils \
-    systemd-container
+    dosfstools \
+    parted
 ```
 
 ### Build
@@ -52,161 +157,148 @@ chmod +x build.sh
 sudo ./build.sh
 ```
 
-This will create `AuraOS-1.0-amd64.iso` in the parent directory.
+Output: `AuraOS-1.0-amd64.iso`
 
 ### Test
 
 ```bash
-qemu-system-x86_64 -cdrom ../AuraOS-1.0-amd64.iso -m 2G -enable-kvm
+qemu-system-x86_64 -cdrom AuraOS-1.0-amd64.iso -m 2G -enable-kvm
 ```
 
-### Install on MacBook Pro 2011
-
-1. Create bootable USB:
-   ```bash
-   sudo dd if=../AuraOS-1.0-amd64.iso of=/dev/sdX bs=4M status=progress && sync
-   ```
-
-2. Boot from USB (hold Option key at startup on Mac)
-
-3. Install AuraOS alongside macOS or replace macOS
-
-## MacBook Pro 2011 Compatibility
-
-AuraOS is optimized for MacBook Pro 2011 models with:
-
-- **CPU**: Intel Core i5/i7 (2nd/3rd generation)
-- **RAM**: 8GB DDR3
-- **GPU**: Intel HD Graphics 3000 / AMD Radeon HD 6750M
-- **Display**: 13.3" LED-backlit
-- **Storage**: SATA SSD/HDD
-
-### Supported Hardware
-
-- WiFi: Broadcom BCM43xx (requires firmware-b43-installer)
-- Audio: Intel HDA (works out of the box)
-- Graphics: Intel HD 3000 (with mesa va-drivers)
-- Touchpad: Apple Magic Trackpad (works with libinput)
-- Keyboard: Apple keyboard (works with xkb options)
-- Webcam: FaceTime HD (works with uvcvideo)
-- Bluetooth: Broadcom BCM20702 (requires firmware)
-
-### Power Management
-
-- TLP for battery optimization
-- thermald for thermal management
-- laptop-mode-tools for power saving
-
-## Desktop Environment
-
-AuraOS uses **XFCE 4** as the default desktop environment because:
-
-- Lightweight (runs well on 8GB RAM)
-- Fast and responsive
-- Highly customizable
-- Stable and mature
-- Low resource usage (~400MB RAM idle)
-
-### Installed Software
-
-**Internet:**
-- Chromium (primary browser)
-- Firefox ESR
-- Transmission (torrent client)
-
-**Office:**
-- LibreOffice (word processor, spreadsheet, presentation)
-- Evince (PDF viewer)
-- Image viewer
-
-**Graphics:**
-- GIMP (image editor)
-- Inkscape (vector graphics)
-- Blender (3D modeling)
-
-**Video/Audio:**
-- VLC (media player)
-- Audacity (audio editor)
-- OBS Studio (screen recording)
-
-**Development:**
-- VS Code
-- Git
-- Python 3
-- Node.js/npm
-- GCC/G++
-
-**Utilities:**
-- GParted (partition editor)
-- Disk utility
-- System monitor
-- File manager (Thunar)
-
-## AuraOS Desktop Overlay
-
-The `/opt/auraos/` directory contains a modern web-based desktop overlay:
-
-- Chromium kiosk mode loads `file:///opt/auraos/index.html`
-- Modern glassmorphism UI
-- App launcher with search
-- File manager integration
-- System monitoring widgets
-- Weather widget (requires geolocation)
-
-This overlay runs **on top of** the real XFCE desktop, providing a modern interface while maintaining full access to real Linux applications.
-
-## Customization
-
-### Change Desktop Environment
-
-To use a different DE instead of XFCE:
-
+Su macOS (senza KVM):
 ```bash
-# GNOME (heavier)
-apt-get install -y gnome-session gdm3
-
-# KDE Plasma (medium)
-apt-get install -y plasma-desktop sddm
-
-# LXQt (lighter)
-apt-get install -y lxqt-core lxqt-session
+qemu-system-x86_64 -cdrom AuraOS-1.0-amd64.iso -m 2G
 ```
 
-### Remove AuraOS Overlay
+## Configurazione Post-Installazione
 
-To use plain XFCE without the AuraOS overlay:
-
+### Rete
 ```bash
-rm -f /home/auraos/.config/autostart/auraos.desktop
+# WiFi
+nmcli dev wifi list
+nmcli dev wifi connect "SSID" password "password"
+
+# Ethernet (automatico)
+```
+
+### Audio
+```bash
+# Controlla volume
+alsamixer
+
+# Riproduci audio di test
+speaker-test -c 2
+```
+
+### Grafica MacBook Pro 2011
+```bash
+# Forza Intel GPU (se problemi con AMD)
+sudo nano /etc/default/grub
+# Aggiungi: GRUB_CMDLINE_LINUX_DEFAULT="radeon.runpm=0 acpi_backlight=vendor"
+
+# Aggiorna GRUB
+sudo update-grub
+```
+
+### Brightness
+```bash
+# Regola luminosità
+xbacklight -set 50
+brightnessctl s 50%
+```
+
+### Batteria
+```bash
+# Visualizza statistiche batteria
+tlp-stat -b
+
+# Risparmio energetico
+sudo tlp start
+```
+
+### Aggiornamenti
+```bash
+sudo apt update
+sudo apt upgrade
+sudo apt autoremove
 ```
 
 ## Troubleshooting
 
-### MacBook Pro 2011 specific
+### MacBook Pro 2011
 
-**WiFi not working:**
+**WiFi non funziona:**
 ```bash
-sudo apt-get install firmware-b43-installer
+sudo apt install firmware-b43-installer
 sudo modprobe b43
 ```
 
-**Brightness control:**
+**Schermata nera:**
+- Prova modalità "Safe Mode" da GRUB
+- Usa parametri `nomodeset` o `i915.modeset=1`
+
+**Audio non funziona:**
 ```bash
-sudo apt-get install xbacklight brightnessctl
+sudo alsa force-reload
 ```
 
-**Trackpad issues:**
+**Trackpad non funziona:**
 ```bash
-sudo apt-get install xserver-xorg-input-libinput
+sudo apt install xserver-xorg-input-libinput
 ```
 
-**Graphics issues:**
+### Vecchi PC
+
+**Grafica lenta:**
 ```bash
-sudo apt-get install mesa-va-drivers mesa-vdpau-drivers
+# Usa driver VESA fallback
+sudo apt install xserver-xorg-video-vesa
 ```
 
-## Support
+**Poca RAM:**
+```bash
+# Disabilita effetti
+xfconf-query -c xfce4-session -p /sessions/...
+```
 
-- Documentation: https://github.com/jeaders/AuraOS/wiki
-- Issues: https://github.com/jeaders/AuraOS/issues
-- Discussions: https://github.com/jeaders/AuraOS/discussions
+## Struttura del Progetto
+
+```
+AuraOS/
+├── distro/                  # Real distro build system
+│   ├── build.sh            # Main build script
+│   ├── kernel/
+│   │   └── config          # Kernel config for MacBook/old PCs
+│   ├── boot/
+│   │   └── grub/
+│   │       ├── grub.cfg    # GRUB config
+│   │       └── theme/
+│   ├── debian/
+│   │   ├── etc/            # System configuration
+│   │   └── usr/            # AuraOS overlay
+│   ├── packages/
+│   │   └── base.list       # Package list
+│   └── scripts/
+│       ├── install.sh      # Installer
+│       └── post-install.sh # Post-install config
+├── desktop/                 # Web desktop overlay
+├── docs/                    # Documentation
+└── README.md
+```
+
+## Supporto
+
+- **GitHub**: https://github.com/jeaders/AuraOS
+- **Issues**: https://github.com/jeaders/AuraOS/issues
+- **Discussions**: https://github.com/jeaders/AuraOS/discussions
+- **Wiki**: https://github.com/jeaders/AuraOS/wiki
+
+## Licenza
+
+MIT License - vedi file LICENSE
+
+## Credits
+
+AuraOS è basato su Debian e utilizza software open source.
+
+Ispirato da: Debian, XFCE, GRUB, Chromium, e la comunità open source.

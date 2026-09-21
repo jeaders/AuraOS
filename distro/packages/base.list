@@ -1,8 +1,10 @@
-# AuraOS Real Distro Package Lists
+# AuraOS base packages for real distro
+# Lightweight but functional for old PCs and MacBook Pro 2011
 
-## Base System
+# Base system
 debootstrap
 systemd
+systemd-sysv
 dbus
 linux-image-amd64
 linux-headers-amd64
@@ -11,65 +13,59 @@ grub-efi-amd64
 xorg
 lightdm
 
-## Desktop Environment
+# Desktop
 xfce4
 xfce4-goodies
 xfce4-terminal
 thunar
 thunar-archive-plugin
 thunar-media-tags-plugin
+xfce4-notifyd
+xfce4-pulseaudio-plugin
+xfce4-screensaver
+xfce4-power-manager
+xfce4-settings
+xfce4-panel
+xfce4-whiskermenu-plugin
 
-## Internet
+# Internet
 chromium
-chromium-l10n
 firefox-esr
 network-manager
 network-manager-gnome
 wget
 curl
-transmission
 transmission-gtk
 
-## Office
-libreoffice
-libreoffice-gtk3
-libreoffice-style-breeze
+# Office
+libreoffice-writer
+libreoffice-calc
+libreoffice-impress
 evince
 eog
 gnome-screenshot
-flameshot
 
-## Graphics
+# Graphics
 gimp
 inkscape
-scribus
 imagemagick
-darktable
-rawtherapee
-blender
 
-## Video/Audio
+# Video/Audio
 ffmpeg
 vlc
 mpv
 audacity
-obs-studio
-youtube-dl
 
-## Development
+# Development
 git
 vim
 nano
 htop
 neofetch
-build-essential
 python3
 python3-pip
-nodejs
-npm
-code
 
-## Utilities
+# Utilities
 gparted
 gnome-disk-utility
 hardinfo
@@ -78,11 +74,10 @@ pciutils
 usbutils
 smartmontools
 ncdu
-baobab
 rclone
 deja-dup
 
-## Drivers (MacBook Pro 2011)
+# Drivers: MacBook Pro 2011 and generic old hardware
 firmware-linux
 firmware-linux-nonfree
 firmware-misc-nonfree
@@ -90,17 +85,48 @@ intel-microcode
 mesa-va-drivers
 mesa-vdpau-drivers
 va-driver-all
-intel-gpu-tools
+i965-va-driver
+xserver-xorg-video-intel
+xserver-xorg-video-ati
+xserver-xorg-video-radeon
+xserver-xorg-video-nouveau
+xserver-xorg-video-fbdev
+xserver-xorg-video-vesa
 xbacklight
 brightnessctl
 tlp
 tlp-rdw
 thermald
+acpi-call-dkms
+firmware-b43-installer
+broadcom-sta-dkms
 
-## System
+# System
 sudo
 locales
 tzdata
 ca-certificates
 gnupg
 apt-transport-https
+software-properties-common
+pkg-config
+build-essential
+
+# App store infrastructure
+apt-xapian-index
+synaptic
+gnome-software
+appstream
+appstream-util
+fwupd
+
+# Geolocation and weather
+geoclue-2.0
+geocode-glib
+libgweather-4-0
+libgweather-common
+gir1.2-gweather-4.0
+gnome-weather
+weather-util
+python3-geopy
+python3-requests

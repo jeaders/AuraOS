@@ -1,16 +1,16 @@
 #!/bin/bash
 # AuraOS Real Distro Build Script
-# Builds a complete Debian-based ISO for MacBook Pro 2011
+# Hybrid BIOS+UEFI ISO for MacBook Pro 2011 and old PCs
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DISTRO_DIR="${SCRIPT_DIR}/.."
+DISTRO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_DIR="${DISTRO_DIR}/build"
 ISO_OUTPUT="${DISTRO_DIR}/AuraOS-1.0-amd64.iso"
 
 echo "=== AuraOS Real Distro Build ==="
-echo "Target: MacBook Pro 2011 (8GB RAM, Intel GPU)"
+echo "Target: MacBook Pro 2011, old PCs, low-RAM systems"
 echo ""
 
 # Clean previous build
@@ -18,202 +18,29 @@ rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
 
 # Step 1: Create rootfs with debootstrap
-echo "[1/5] Creating root filesystem with debootstrap..."
+echo "[1/6] Creating root filesystem with debootstrap..."
 sudo debootstrap --arch=amd64 --variant=minbase \
-    --include="systemd,systemd-sysv,dbus" \
+    --include="systemd,systemd-sysv,dbus,udev" \
     bookworm "${BUILD_DIR}/rootfs" \
     http://deb.debian.org/debian
 
 # Step 2: Copy AuraOS configuration
-echo "[2/5] Copying AuraOS configuration..."
-sudo cp -r "${DISTRO_DIR}/distro/debian/etc" "${BUILD_DIR}/rootfs/"
-sudo cp -r "${DISTRO_DIR}/distro/debian/usr" "${BUILD_DIR}/rootfs/"
+echo "[2/6] Copying AuraOS configuration..."
+sudo cp -r "${DISTRO_DIR}/debian/etc" "${BUILD_DIR}/rootfs/"
+sudo cp -r "${DISTRO_DIR}/debian/usr" "${BUILD_DIR}/rootfs/"
 
 # Step 3: Install packages
-echo "[3/5] Installing packages..."
+echo "[3/6] Installing packages..."
 sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
-    apt-get install -y \
-        linux-image-amd64 \
-        linux-headers-amd64 \
-        grub-pc \
-        grub-efi-amd64 \
-        xorg \
-        xfce4 \
-        xfce4-goodies \
-        lightdm \
-        network-manager \
-        network-manager-gnome \
-        chromium \
-        chromium-l10n \
-        firefox-esr \
-        sudo \
-        locales \
-        tzdata \
-        wget \
-        curl \
-        git \
-        vim \
-        nano \
-        htop \
-        neofetch \
-        apt-transport-https \
-        ca-certificates \
-        gnupg \
-        software-properties-common \
-        bluez \
-        bluez-firmware \
-        pulseaudio \
-        pavucontrol \
-        alsa-utils \
-        firmware-linux \
-        firmware-linux-nonfree \
-        firmware-misc-nonfree \
-        intel-microcode \
-        thermald \
-        laptop-mode-tools \
-        acpi \
-        acpi-call-dkms \
-        powertop \
-        tlp \
-        tlp-rdw \
-        udisks2 \
-        gvfs-backends \
-        gvfs-fuse \
-        thunar \
-        thunar-archive-plugin \
-        thunar-media-tags-plugin \
-        file-roller \
-        p7zip-full \
-        unzip \
-        zip \
-        gparted \
-        gnome-disk-utility \
-        hardinfo \
-        lshw \
-        pciutils \
-        usbutils \
-        dmidecode \
-        smartmontools \
-        mesa-va-drivers \
-        mesa-vdpau-drivers \
-        va-driver-all \
-        vdpauinfo \
-        intel-gpu-tools \
-        xbacklight \
-        brightnessctl \
-        cpufrequtils \
-        i965-va-driver \
-        vainfo \
-        ffmpeg \
-        vlc \
-        mpv \
-        youtube-dl \
-        transmission \
-        transmission-gtk \
-        simple-scan \
-        evince \
-        eog \
-        imagemagick \
-        gimp \
-        inkscape \
-        scribus \
-        libreoffice \
-        libreoffice-gtk3 \
-        libreoffice-style-breeze \
-        calibre \
-        discord \
-        telegram-desktop \
-        signal-desktop \
-        keepassxc \
-        bitwarden \
-        gnome-screenshot \
-        flameshot \
-        obs-studio \
-        audacity \
-        lmms \
-        ardour \
-        blender \
-        openshot \
-        kdenlive \
-        scribus \
-        freecad \
-        darktable \
-        rawtherapee \
-        avidemux \
-        handbrake \
-        mkvtoolnix \
-        apt-listchanges \
-        apt-xapian-index \
-        aptitude \
-        dpkg-dev \
-        debhelper \
-        fakeroot \
-        build-essential \
-        python3 \
-        python3-pip \
-        nodejs \
-        npm \
-        code \
-        vscode \
-        zeal \
-        zeal \
-        geogebra \
-        scilab \
-        maxima \
-        wxmaxima \
-        lyx \
-        gummi \
-        texlive \
-        texlive-latex-extra \
-        texlive-fonts-recommended \
-        texlive-science \
-        texlive-pictures \
-        texlive-lang-italian \
-        asymptote \
-        gnuplot \
-        octave \
-        r-base \
-        sqlite3 \
-        sqlitebrowser \
-        pgadmin3 \
-        mongodb-clients \
-        redis-tools \
-        docker.io \
-        podman \
-        kubectl \
-        minikube \
-        helm \
-        terraform \
-        ansible \
-        vagrant \
-        virtualbox \
-        virt-manager \
-        qemu-system-x86 \
-        qemu-utils \
-        libvirt-daemon-system \
-        libvirt-clients \
-        git-cola \
-        gitg \
-        tig \
-        meld \
-        diffutils \
-        patch \
-        rsync \
-        rclone \
-        ncdu \
-        baobab \
-        deja-dup \
-        timeshift \
-        cron \
-        at \
-        logrotate \
-        systemd-analyze
-    "
+    apt-get install -y $(cat /usr/share/auraos/packages/base.list | grep -v '^#' | xargs)
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+"
 
 # Step 4: Configure system
-echo "[4/5] Configuring system..."
+echo "[4/6] Configuring system..."
 sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
     export DEBIAN_FRONTEND=noninteractive
     
@@ -248,32 +75,67 @@ HOSTSEOF
     # Create user
     useradd -m -s /bin/bash -G sudo,audio,video,plugdev,netdev auraos
     echo 'auraos:auraos' | chpasswd
+
+    # Enable services
+    systemctl enable geoclue
+    systemctl enable fwupd
 "
 
-# Step 5: Build ISO
-echo "[5/5] Building ISO..."
+# Step 5: Build squashfs
+echo "[5/6] Building squashfs..."
 sudo mksquashfs "${BUILD_DIR}/rootfs" "${BUILD_DIR}/filesystem.squashfs" -comp xz -noappend
 
-# Create ISO structure
-mkdir -p "${BUILD_DIR}/iso/boot/grub"
-mkdir -p "${BUILD_DIR}/iso/live"
+# Step 6: Create hybrid ISO
+echo "[6/6] Creating hybrid ISO..."
+ISO_DIR="${BUILD_DIR}/iso"
+mkdir -p "${ISO_DIR}/boot/grub"
+mkdir -p "${ISO_DIR}/live"
+mkdir -p "${ISO_DIR}/boot/grub/i386-pc"
+mkdir -p "${ISO_DIR}/boot/grub/x86_64-efi"
 
 # Copy kernel and initrd
-cp "${BUILD_DIR}/rootfs/boot/vmlinuz-"* "${BUILD_DIR}/iso/live/vmlinuz"
-cp "${BUILD_DIR}/rootfs/boot/initrd.img-"* "${BUILD_DIR}/iso/live/initrd.img"
+cp "${BUILD_DIR}/rootfs/boot/vmlinuz-"* "${ISO_DIR}/live/vmlinuz"
+cp "${BUILD_DIR}/rootfs/boot/initrd.img-"* "${ISO_DIR}/live/initrd.img"
 
 # Copy squashfs
-cp "${BUILD_DIR}/filesystem.squashfs" "${BUILD_DIR}/iso/live/"
+cp "${BUILD_DIR}/filesystem.squashfs" "${ISO_DIR}/live/"
 
 # Copy GRUB config
-cp "${DISTRO_DIR}/boot/grub/grub.cfg" "${BUILD_DIR}/iso/boot/grub/grub.cfg"
+cp "${DISTRO_DIR}/boot/grub/grub.cfg" "${ISO_DIR}/boot/grub/grub.cfg"
 
-# Copy GRUB modules
-cp -r /usr/lib/grub/i386-pc "${BUILD_DIR}/iso/boot/grub/"
-cp -r /usr/lib/grub/x86_64-efi "${BUILD_DIR}/iso/boot/grub/"
+# Copy GRUB modules for hybrid BIOS+UEFI
+cp -r /usr/lib/grub/i386-pc/* "${ISO_DIR}/boot/grub/i386-pc/"
+cp -r /usr/lib/grub/x86_64-efi/* "${ISO_DIR}/boot/grub/x86_64-efi/"
 
-# Create ISO
-sudo grub-mkrescue -o "${ISO_OUTPUT}" "${BUILD_DIR}/iso" --xorriso=" -quiet "
+# Create EFI image for UEFI boot
+echo "Creating EFI image..."
+dd if=/dev/zero of="${ISO_DIR}/boot/grub/x86_64-efi/efi.img" bs=1M count=10 2>/dev/null
+mkfs.fat -F 32 "${ISO_DIR}/boot/grub/x86_64-efi/efi.img" 2>/dev/null || true
+sudo mkdir -p /mnt/auraos-efi
+sudo mount -o loop "${ISO_DIR}/boot/grub/x86_64-efi/efi.img" /mnt/auraos-efi 2>/dev/null || true
+sudo cp -r /usr/lib/grub/x86_64-efi/* /mnt/auraos-efi/ 2>/dev/null || true
+sudo umount /mnt/auraos-efi 2>/dev/null || true
+rmdir /mnt/auraos-efi 2>/dev/null || true
+
+# Create ISO with xorriso for hybrid support
+sudo xorriso -as mkisofs \
+    -iso-level 3 \
+    -full-iso9660-filenames \
+    -volid "AuraOS" \
+    -output "${ISO_OUTPUT}" \
+    -eltorito-boot boot/grub/i386-pc/eltorito.img \
+    -eltorito-catalog boot/grub/i386-pc/boot.catalog \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    -eltorito-alt-boot \
+    -e boot/grub/x86_64-efi/efi.img \
+    -no-emul-boot \
+    -append_partition 2 0xEF boot/grub/x86_64-efi/efi.img \
+    "${ISO_DIR}/"
+
+# Make ISO hybrid bootable
+sudo isohybrid --uefi "${ISO_OUTPUT}"
 
 # Generate checksum
 sha256sum "${ISO_OUTPUT}" > "${ISO_OUTPUT}.sha256"
@@ -283,9 +145,12 @@ echo "=== Build Complete ==="
 echo "ISO: ${ISO_OUTPUT}"
 echo "SHA256: $(cat ${ISO_OUTPUT}.sha256)"
 echo ""
-echo "To test:"
-echo "  qemu-system-x86_64 -cdrom ${ISO_OUTPUT} -m 2G -enable-kvm"
+echo "Test in QEMU:"
+echo "  qemu-system-x86_64 -cdrom ${ISO_OUTPUT} -m 2G"
 echo ""
-echo "To write to USB:"
+echo "Write to USB:"
 echo "  sudo dd if=${ISO_OUTPUT} of=/dev/sdX bs=4M status=progress && sync"
+echo ""
+echo "Boot on MacBook Pro 2011:"
+echo "  Hold Option key at boot, select USB drive"
 echo ""
