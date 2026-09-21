@@ -1,0 +1,16 @@
+# Boot configuration
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="AuraOS"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_CMDLINE_LINUX=""
+
+# Theme
+GRUB_THEME="/boot/grub/theme/auraos.txt"
+
+# Graphics
+GRUB_GFXMODE=auto
+GRUB_GFXPAYLOAD_LINUX=keep
+
+# Enable OS Prober (optional, for dual boot)
+GRUB_DISABLE_OS_PROBER=false

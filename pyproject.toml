@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auraos"
+version = "1.0.0"
+description = "AuraOS - Educational Linux Distribution"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Alex Mirici", email = "team@auraos.dev"}
+]
+keywords = ["linux", "distribution", "educational", "desktop", "operating-system"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: No Input/Output (Daemon)",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: JavaScript",
+    "Topic :: Desktop Environment",
+    "Topic :: Education",
+]
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/jeaders/AuraOS"
+Documentation = "https://github.com/jeaders/AuraOS/wiki"
+Repository = "https://github.com/jeaders/AuraOS.git"
+Issues = "https://github.com/jeaders/AuraOS/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["desktop*", "kernel*", "boot*", "scripts*", "docs*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt", "*.json", "*.sh", "*.cfg", "*.service", "*.conf"]

@@ -1,0 +1,61 @@
+{
+  "name": "auraos",
+  "version": "1.0.0",
+  "description": "AuraOS - Sistema Operativo Virtuale Educativo",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pwa": "python3 -m http.server 8080",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "dist": "electron-builder --publish=never",
+    "postinstall": "electron-builder install-app-deps",
+    "make": "make build",
+    "kernel": "make kernel",
+    "iso": "make iso",
+    "package": "make package",
+    "validate": "make validate",
+    "test": "make test"
+  },
+  "author": "Alex Mirici",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.auraos.desktop",
+    "productName": "AuraOS",
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": ["nsis", "portable"]
+    },
+    "linux": {
+      "icon": "build/icons",
+      "target": ["AppImage", "deb"],
+      "category": "Education"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE.md,license.md}",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ]
+  }
+}

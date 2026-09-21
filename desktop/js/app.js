@@ -1,12 +1,12 @@
-// ===== JeadOS - Main Application =====
-class JeadOSApp {
+// ===== AuraOS - Main Application =====
+class AuraOSApp {
     constructor() {
         this.state = {
-            profile: localStorage.getItem('jeados_profile') || localStorage.getItem('webos_profile') || null,
-            userMode: localStorage.getItem('jeados_mode') || localStorage.getItem('webos_mode') || 'adulto',
-            iconSize: localStorage.getItem('jeados_iconSize') || localStorage.getItem('webos_iconSize') || 'medium',
-            wallpaper: localStorage.getItem('jeados_wallpaper') || localStorage.getItem('webos_wallpaper') || 'gradient',
-            soundsEnabled: (localStorage.getItem('jeados_sounds') || localStorage.getItem('webos_sounds')) !== 'false',
+            profile: localStorage.getItem('auraos_profile') || null,
+            userMode: localStorage.getItem('auraos_mode') || 'adulto',
+            iconSize: localStorage.getItem('auraos_iconSize') || 'medium',
+            wallpaper: localStorage.getItem('auraos_wallpaper') || 'gradient',
+            soundsEnabled: (localStorage.getItem('auraos_sounds')) !== 'false',
             openWindows: [],
             windowZIndex: 100,
             activeWindow: null,
@@ -16,7 +16,7 @@ class JeadOSApp {
             contextMenuOpen: false,
             currentSnapWindow: null,
             bootTime: Date.now(),
-            fmView: localStorage.getItem('jeados_fm_view') || localStorage.getItem('webos_fm_view') || 'grid',
+            fmView: localStorage.getItem('auraos_fm_view') || 'grid',
             fmSort: { field: 'name', direction: 'asc' },
             clipboard: { type: null, items: [] },
             fmSelectedItems: [],
@@ -36,33 +36,34 @@ class JeadOSApp {
                 { id: 2, name: 'Spazio 2', windows: [] },
                 { id: 3, name: 'Spazio 3', windows: [] },
             ],
+            passwordEnabled: !!localStorage.getItem('auraos_password'),
             appearance: {
-                theme: localStorage.getItem('jeados_theme') || localStorage.getItem('webos_theme') || 'auto',
-                dockPosition: localStorage.getItem('jeados_dock_position') || localStorage.getItem('webos_dock_position') || 'bottom',
-                dockSize: localStorage.getItem('jeados_dock_size') || localStorage.getItem('webos_dock_size') || 'medium',
-                topBarVisible: (localStorage.getItem('jeados_topbar_visible') || localStorage.getItem('webos_topbar_visible') || 'true') !== 'false',
-                animationsEnabled: (localStorage.getItem('jeados_animations') || localStorage.getItem('webos_animations') || 'true') !== 'false',
-                fontSize: localStorage.getItem('jeados_font_size') || localStorage.getItem('webos_font_size') || 'medium',
+                theme: localStorage.getItem('auraos_theme') || 'auto',
+                dockPosition: localStorage.getItem('auraos_dock_position') || 'bottom',
+                dockSize: localStorage.getItem('auraos_dock_size') || 'medium',
+                topBarVisible: (localStorage.getItem('auraos_topbar_visible') || 'true') !== 'false',
+                animationsEnabled: (localStorage.getItem('auraos_animations') || 'true') !== 'false',
+                fontSize: localStorage.getItem('auraos_font_size') || 'medium',
             },
         };
 
         try {
-            const savedTrash = localStorage.getItem('jeados_trash') || localStorage.getItem('webos_trash');
+            const savedTrash = localStorage.getItem('auraos_trash');
             if (savedTrash) this.state.trash = JSON.parse(savedTrash);
         } catch (e) { this.state.trash = []; }
 
         try {
-            const savedNotifs = localStorage.getItem('jeados_notifications') || localStorage.getItem('webos_notifications');
+            const savedNotifs = localStorage.getItem('auraos_notifications');
             if (savedNotifs) this.state.notifications = JSON.parse(savedNotifs);
         } catch (e) { this.state.notifications = []; }
 
         try {
-            const savedRecentApps = localStorage.getItem('jeados_recent_apps') || localStorage.getItem('webos_recent_apps');
+            const savedRecentApps = localStorage.getItem('auraos_recent_apps');
             if (savedRecentApps) this.state.recentApps = JSON.parse(savedRecentApps);
         } catch (e) { this.state.recentApps = []; }
 
         try {
-            const savedRecentFiles = localStorage.getItem('jeados_recent_files') || localStorage.getItem('webos_recent_files');
+            const savedRecentFiles = localStorage.getItem('auraos_recent_files');
             if (savedRecentFiles) this.state.recentFiles = JSON.parse(savedRecentFiles);
         } catch (e) { this.state.recentFiles = []; }
 
@@ -97,21 +98,116 @@ class JeadOSApp {
     }
 
     init() {
+        this.initNativeAPIs();
         this.initFilesystem();
+        this.initRealFilesystem();
         this.initSoundEngine();
         this.setupEventListeners();
         this.updateClock();
         setInterval(() => this.updateClock(), 1000);
         this.updateNotificationBadge();
         if (this.state.profile) {
-            this.boot();
+            if (this.state.passwordEnabled) {
+                this.showLoginScreen();
+            } else {
+                this.boot();
+            }
         } else {
             this.showProfileSelection();
         }
     }
 
+    initNativeAPIs() {
+        this.isElectron = typeof window !== 'undefined' && window.auraOSNative !== undefined;
+        this.hasFileSystemAccess = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+        if (this.isElectron) {
+            this.platform = window.auraosNative.platform;
+        }
+    }
+
+    async     initRealFilesystem() {
+        if (!this.hasFileSystemAccess) return;
+        const savedHandle = localStorage.getItem('auraos_real_fs_handle');
+        if (savedHandle) {
+            try {
+                const handle = await navigator.storage.getDirectory();
+                this.realFileHandle = handle;
+            } catch (e) {
+                this.realFileHandle = null;
+            }
+        }
+    }
+
+    async requestRealFileSystemAccess() {
+        if (!this.hasFileSystemAccess) {
+            this.showToast('Filesystem', 'Accesso al filesystem reale non supportato in questo browser.', 'error', 3000);
+            return false;
+        }
+        try {
+            const handle = await navigator.storage.getDirectory();
+            this.realFileHandle = handle;
+            this.showToast('Filesystem', 'Accesso al filesystem reale concesso! Ora puoi usare file reali.', 'success', 3000);
+            return true;
+        } catch (e) {
+            this.showToast('Filesystem', 'Accesso negato. Riprova.', 'error', 3000);
+            return false;
+        }
+    }
+
+    showLoginScreen() {
+        const loginScreen = document.getElementById('login-screen');
+        const bootScreen = document.getElementById('boot-screen');
+        const desktop = document.getElementById('desktop');
+        const topBar = document.getElementById('top-bar');
+        const dock = document.getElementById('dock');
+        
+        if (loginScreen) {
+            loginScreen.classList.remove('hidden');
+            document.getElementById('login-user-name').textContent = 
+                this.state.profile === 'bambino' ? 'Bambino' : 
+                this.state.profile === 'adulto' ? 'Adulto' : 'Anziano';
+            setTimeout(() => {
+                const input = document.getElementById('login-password');
+                if (input) input.focus();
+            }, 100);
+        }
+        if (bootScreen) bootScreen.classList.add('hidden');
+        if (desktop) desktop.classList.add('hidden');
+        if (topBar) topBar.classList.add('hidden');
+        if (dock) dock.classList.add('hidden');
+    }
+
+    doLogin() {
+        const input = document.getElementById('login-password');
+        const error = document.getElementById('login-error');
+        const password = input ? input.value : '';
+        const storedPassword = localStorage.getItem('auraos_password');
+        
+        if (storedPassword && password !== storedPassword) {
+            if (error) {
+                error.classList.remove('hidden');
+                setTimeout(() => error.classList.add('hidden'), 3000);
+            }
+            if (input) input.value = '';
+            return;
+        }
+        
+        if (error) error.classList.add('hidden');
+        this.boot();
+    }
+
+    setPassword(password) {
+        if (password) {
+            localStorage.setItem('auraos_password', password);
+            this.state.passwordEnabled = true;
+        } else {
+            localStorage.removeItem('auraos_password');
+            this.state.passwordEnabled = false;
+        }
+    }
+
     initFilesystem() {
-        const saved = localStorage.getItem('jeados_filesystem') || localStorage.getItem('webos_filesystem');
+        const saved = localStorage.getItem('auraos_filesystem');
         if (saved) {
             try {
                 this.state.filesystem = JSON.parse(saved);
@@ -188,7 +284,7 @@ class JeadOSApp {
 
     saveFilesystem() {
         try {
-            localStorage.setItem('jeados_filesystem', JSON.stringify(this.state.filesystem));
+            localStorage.setItem('auraos_filesystem', JSON.stringify(this.state.filesystem));
         } catch (e) {
             // Ignore storage errors
         }
@@ -303,8 +399,8 @@ class JeadOSApp {
     selectProfile(profile) {
         this.state.profile = profile;
         this.state.userMode = profile;
-        localStorage.setItem('jeados_profile', profile);
-        localStorage.setItem('jeados_mode', profile);
+        localStorage.setItem('auraos_profile', profile);
+        localStorage.setItem('auraos_mode', profile);
         const bootScreen = document.getElementById('boot-screen');
         bootScreen.classList.add('fade-out');
         setTimeout(() => {
@@ -341,7 +437,7 @@ class JeadOSApp {
         this.initParallax();
         this.initClockWidget();
         setTimeout(() => {
-            this.showTutorMessage('Ciao! Benvenuto in JeadOS! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare un tour, oppure esplora pure le app!');
+            this.showTutorMessage('Ciao! Benvenuto in AuraOS! Sono il tuo Tutor AI. Clicca su "Guida" per iniziare un tour, oppure esplora pure le app!');
         }, 1000);
         if (this.state.userMode === 'anziano') {
             const voiceBtn = document.getElementById('voice-btn');
@@ -417,14 +513,14 @@ class JeadOSApp {
         const widget = document.createElement('div');
         widget.id = 'weather-widget';
         widget.className = 'weather-widget';
-        const cached = localStorage.getItem('jeados_weather') || localStorage.getItem('webos_weather');
+        const cached = localStorage.getItem('auraos_weather') || localStorage.getItem('webos_weather');
         let weatherData;
         try {
             weatherData = cached ? JSON.parse(cached) : this.generateWeatherData();
         } catch (e) {
             weatherData = this.generateWeatherData();
         }
-        localStorage.setItem('jeados_weather', JSON.stringify(weatherData));
+        localStorage.setItem('auraos_weather', JSON.stringify(weatherData));
         widget.innerHTML = this.getWeatherWidgetHTML(weatherData);
         const desktop = document.getElementById('desktop');
         desktop.appendChild(widget);
@@ -433,7 +529,7 @@ class JeadOSApp {
             refreshBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const newData = this.generateWeatherData();
-                localStorage.setItem('jeados_weather', JSON.stringify(newData));
+                localStorage.setItem('auraos_weather', JSON.stringify(newData));
                 widget.innerHTML = this.getWeatherWidgetHTML(newData);
                 this.playSound('success');
             });
@@ -549,7 +645,7 @@ class JeadOSApp {
             <div style="padding: 20px;">
                 <h3 style="color: #667eea; margin-bottom: 15px;">ℹ️ Proprietà del sistema</h3>
                 <div style="background: #f7fafc; padding: 15px; border-radius: 8px; line-height: 2;">
-                    <p><strong>Sistema:</strong> JeadOS v1.0</p>
+                    <p><strong>Sistema:</strong> AuraOS v1.0</p>
                     <p><strong>Utente:</strong> ${this.state.profile || 'Non selezionato'}</p>
                     <p><strong>Modalità:</strong> ${this.state.userMode}</p>
                     <p><strong>Sfondo:</strong> ${this.state.wallpaper}</p>
@@ -684,7 +780,7 @@ class JeadOSApp {
     // ===== Sound Engine =====
     initSoundEngine() {
         this.audioContext = null;
-        this.state.soundsEnabled = (localStorage.getItem('jeados_sounds') || localStorage.getItem('webos_sounds')) !== 'false';
+        this.state.soundsEnabled = (localStorage.getItem('auraos_sounds') || localStorage.getItem('webos_sounds')) !== 'false';
     }
 
     getAudioContext() {
@@ -780,7 +876,7 @@ class JeadOSApp {
 
     toggleSounds(enabled) {
         this.state.soundsEnabled = enabled;
-        localStorage.setItem('jeados_sounds', enabled);
+        localStorage.setItem('auraos_sounds', enabled);
         this.showToast('Audio', enabled ? 'Effetti sonori attivati.' : 'Effetti sonori disattivati.', 'info', 2000);
         if (enabled) this.playSound('success');
     }
@@ -1103,7 +1199,7 @@ class JeadOSApp {
     }
 
     initNotepad(windowId) {
-        const notes = localStorage.getItem('jeados_notes') || localStorage.getItem('webos_notes');
+        const notes = localStorage.getItem('auraos_notes') || localStorage.getItem('webos_notes');
         const textarea = document.getElementById(`notepad-textarea-${windowId}`);
         const statusEl = document.getElementById(`notepad-status-${windowId}`);
         const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
@@ -1115,7 +1211,7 @@ class JeadOSApp {
             if (statusEl) statusEl.textContent = 'Non salvato...';
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
-                localStorage.setItem('jeados_notes', textarea.value);
+                localStorage.setItem('auraos_notes', textarea.value);
                 if (statusEl) statusEl.textContent = 'Salvato ✓';
                 this.playSound('success');
             }, 800);
@@ -1139,7 +1235,7 @@ class JeadOSApp {
         if (!textarea) return;
         if (confirm('Sei sicuro di voler svuotare il blocco note?')) {
             textarea.value = '';
-            localStorage.removeItem('jeados_notes');
+            localStorage.removeItem('auraos_notes');
             if (statusEl) statusEl.textContent = 'Pronto';
             if (wordcountEl) wordcountEl.textContent = '0 parole';
             this.playSound('success');
@@ -1182,7 +1278,7 @@ class JeadOSApp {
         const ts = this.terminalState[windowId];
 
         const welcomeLines = [
-            { type: 'welcome', text: 'JeadOS - Terminale v1.0' },
+            { type: 'welcome', text: 'AuraOS - Terminale v1.0' },
             { type: 'welcome', text: 'Digita "help" per vedere i comandi disponibili.' },
             { type: 'blank' },
         ];
@@ -1195,7 +1291,7 @@ class JeadOSApp {
                 if (cmd) {
                     ts.history.push(cmd);
                     ts.historyIndex = ts.history.length;
-                    this.terminalPrint(windowId, `utente@jeados:${ts.cwd === '/' ? '~' : ts.cwd}$ ${cmd}`, 'command');
+                    this.terminalPrint(windowId, `utente@auraos:${ts.cwd === '/' ? '~' : ts.cwd}$ ${cmd}`, 'command');
                 }
                 this.terminalExecute(windowId, cmd);
                 input.focus();
@@ -1422,7 +1518,7 @@ class JeadOSApp {
         const prompt = document.getElementById(`terminal-prompt-${windowId}`);
         if (prompt) {
             const displayPath = ts.cwd === '/' ? '~' : `~${ts.cwd}`;
-            prompt.innerHTML = `utente@jeados:${displayPath}$&nbsp;`;
+            prompt.innerHTML = `utente@auraos:${displayPath}$&nbsp;`;
         }
     }
 
@@ -1463,16 +1559,16 @@ class JeadOSApp {
         lines.forEach(l => this.terminalPrint(windowId, l.text, l.type));
         this.terminalPrint(windowId, '', 'blank');
         const user = this.state.profile || 'utente';
-        const hostname = 'jeados';
-        const os = 'JeadOS v1.0';
-        const kernel = '5.15.0-jeados';
+        const hostname = 'auraos';
+        const os = 'AuraOS v1.0';
+        const kernel = '5.15.0-auraos';
         const uptime = this.getUptime();
         const shell = 'bash 5.1.16';
         const resolution = `${window.innerWidth}x${window.innerHeight}`;
-        const de = 'JeadOS Desktop';
+        const de = 'AuraOS Desktop';
         const theme = 'Glassmorphism';
         const icons = 'Noto Color';
-        const term = 'JeadOS Terminal';
+        const term = 'AuraOS Terminal';
         const cpu = `${(Math.random() * 2 + 1).toFixed(1)} GHz @ ${Math.floor(Math.random() * 4 + 2)} Core`;
         const mem = `${Math.floor(Math.random() * 400 + 512)} MB / ${Math.floor(Math.random() * 500 + 2048)} MB`;
 
@@ -1707,20 +1803,20 @@ class JeadOSApp {
     }
 
     initNotepad(windowId) {
-        const notes = localStorage.getItem('jeados_notes') || localStorage.getItem('webos_notes');
+        const notes = localStorage.getItem('auraos_notes') || localStorage.getItem('webos_notes');
         const editor = document.getElementById(`notepad-editor-${windowId}`);
         const statusEl = document.getElementById(`notepad-status-${windowId}`);
         const wordcountEl = document.getElementById(`notepad-wordcount-${windowId}`);
         if (!editor) return;
         editor.textContent = notes || '';
-        editor.style.fontSize = localStorage.getItem('jeados_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14px';
+        editor.style.fontSize = localStorage.getItem('auraos_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14px';
         this.updateNotepadWordCount(windowId);
         let saveTimeout;
         editor.addEventListener('input', () => {
             if (statusEl) statusEl.textContent = 'Non salvato...';
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
-                localStorage.setItem('jeados_notes', editor.textContent);
+                localStorage.setItem('auraos_notes', editor.textContent);
                 if (statusEl) statusEl.textContent = 'Salvato ✓';
                 this.playSound('success');
             }, 800);
@@ -1738,10 +1834,10 @@ class JeadOSApp {
     notepadFontSize(windowId, delta) {
         const editor = document.getElementById(`notepad-editor-${windowId}`);
         if (!editor) return;
-        const current = parseInt(localStorage.getItem('jeados_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14');
+        const current = parseInt(localStorage.getItem('auraos_notes_fontsize') || localStorage.getItem('webos_notes_fontsize') || '14');
         const newSize = Math.max(10, Math.min(28, current + delta * 2));
         editor.style.fontSize = newSize + 'px';
-        localStorage.setItem('jeados_notes_fontsize', newSize + 'px');
+        localStorage.setItem('auraos_notes_fontsize', newSize + 'px');
     }
 
     updateNotepadWordCount(windowId) {
@@ -2097,7 +2193,7 @@ class JeadOSApp {
 
     setFmView(view) {
         this.state.fmView = view;
-        localStorage.setItem('jeados_fm_view', view);
+        localStorage.setItem('auraos_fm_view', view);
         const winId = this.state.activeWindow;
         if (winId) {
             const path = this.state.fmCurrentPath[winId] || '/';
@@ -2612,7 +2708,7 @@ class JeadOSApp {
             <div class="browser-toolbar">
                 <button class="browser-btn" onclick="app.browserBack('${windowId}')" title="Indietro">←</button>
                 <button class="browser-btn" onclick="app.browserForward('${windowId}')" title="Avanti">→</button>
-                <input type="text" class="browser-url" id="browser-url-${windowId}" value="jeados://home" readonly>
+                <input type="text" class="browser-url" id="browser-url-${windowId}" value="auraos://home" readonly>
             </div>
             <div class="browser-content" id="browser-content-${windowId}">
                 ${this.getBrowserPage('home')}
@@ -2778,12 +2874,12 @@ class JeadOSApp {
         if (urlInput) {
             urlInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    const val = urlInput.value.replace('jeados://', '').trim().toLowerCase();
+                    const val = urlInput.value.replace('auraos://', '').trim().toLowerCase();
                     const pages = this.getBrowserPages();
                     if (pages.includes(val)) {
                         this.navigateBrowser(val);
                     } else {
-                        urlInput.value = 'jeados://home';
+                        urlInput.value = 'auraos://home';
                         this.navigateBrowser('home');
                     }
                 }
@@ -2798,7 +2894,7 @@ class JeadOSApp {
         const url = document.getElementById(`browser-url-${activeWin.id}`);
         if (content) {
             content.innerHTML = this.getBrowserPage(page);
-            if (url) url.value = `jeados://${page}`;
+            if (url) url.value = `auraos://${page}`;
         }
     }
 
@@ -2807,7 +2903,7 @@ class JeadOSApp {
         const url = document.getElementById(`browser-url-${windowId}`);
         if (content) {
             content.innerHTML = this.getBrowserPage('home');
-            if (url) url.value = 'jeados://home';
+            if (url) url.value = 'auraos://home';
         }
     }
 
@@ -2816,7 +2912,7 @@ class JeadOSApp {
         const url = document.getElementById(`browser-url-${windowId}`);
         if (content) {
             content.innerHTML = this.getBrowserPage('internet');
-            if (url) url.value = 'jeados://internet';
+            if (url) url.value = 'auraos://internet';
         }
     }
 
@@ -2945,12 +3041,39 @@ class JeadOSApp {
             </div>
 
             <div class="settings-section">
+                <h3>🔒 Sicurezza</h3>
+                <div class="settings-option">
+                    <span class="settings-label">Password di accesso</span>
+                    <div class="settings-control">
+                        <button class="settings-btn ${this.state.passwordEnabled ? 'active' : ''}" onclick="app.togglePassword(true)">Attiva</button>
+                        <button class="settings-btn ${!this.state.passwordEnabled ? 'active' : ''}" onclick="app.togglePassword(false)">Disattiva</button>
+                    </div>
+                </div>
+                ${this.state.passwordEnabled ? `
+                <div class="settings-option">
+                    <span class="settings-label">Cambia password</span>
+                    <div class="settings-control">
+                        <input type="password" id="new-password" class="settings-input" placeholder="Nuova password" onkeydown="if(event.key==='Enter')app.changePassword()">
+                        <button class="settings-btn" onclick="app.changePassword()">Salva</button>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="settings-section">
                 <h3>💾 Dati</h3>
                 <div class="settings-option">
                     <span class="settings-label">File salvati</span>
                     <div class="settings-control">
                         <button class="settings-btn" onclick="app.resetFilesystem()">🔄 Ripristina file</button>
                     </div>
+                </div>
+                <div class="settings-option">
+                    <span class="settings-label">Filesystem reale</span>
+                    <div class="settings-control">
+                        <button class="settings-btn" onclick="app.requestRealFileSystemAccess()">📂 Accesso filesystem reale</button>
+                    </div>
+                    <p class="settings-hint">Consenti a AuraOS di accedere ai tuoi file reali (richiede supporto browser)</p>
                 </div>
             </div>
         `;
@@ -2961,7 +3084,7 @@ class JeadOSApp {
 
     setWallpaper(wallpaper) {
         this.state.wallpaper = wallpaper;
-        localStorage.setItem('jeados_wallpaper', wallpaper);
+        localStorage.setItem('auraos_wallpaper', wallpaper);
         this.applySettings();
         this.showToast('Sfondo cambiato', `Nuovo sfondo: "${wallpaper}".`, 'success');
         this.addNotification('Sfondo', `Sfondo cambiato in "${wallpaper}".`, 'info');
@@ -2970,13 +3093,13 @@ class JeadOSApp {
 
     setIconSize(size) {
         this.state.iconSize = size;
-        localStorage.setItem('jeados_iconSize', size);
+        localStorage.setItem('auraos_iconSize', size);
         this.applySettings();
     }
 
     setUserMode(mode) {
         this.state.userMode = mode;
-        localStorage.setItem('jeados_mode', mode);
+        localStorage.setItem('auraos_mode', mode);
         this.applySettings();
         this.showToast('Modalità cambiata', `Modalità: "${mode}".`, 'success');
         this.addNotification('Modalità', `Modalità cambiata in "${mode}".`, 'info');
@@ -2990,11 +3113,42 @@ class JeadOSApp {
 
     resetFilesystem() {
         if (confirm('Sei sicuro? Tutti i file e le cartelle verranno cancellati.')) {
-            localStorage.removeItem('jeados_filesystem');
+            localStorage.removeItem('auraos_filesystem');
             this.initFilesystem();
             this.showToast('Ripristino', 'File ripristinati ai valori predefiniti.', 'success');
             this.addNotification('File ripristinati', 'Il filesystem è stato ripristinato ai valori predefiniti.', 'info');
             this.showTutorMessage('Ho ripristinato i file predefiniti.');
+        }
+    }
+
+    togglePassword(enabled) {
+        if (enabled) {
+            const password = prompt('Inserisci una nuova password:');
+            if (password && password.length >= 4) {
+                this.setPassword(password);
+                this.showToast('Sicurezza', 'Password di accesso attivata!', 'success');
+                this.showTutorMessage('Password attivata! Al prossimo avvio ti verrà chiesta la password.');
+            } else if (password !== null) {
+                this.showToast('Sicurezza', 'La password deve essere di almeno 4 caratteri.', 'error');
+            }
+        } else {
+            if (confirm('Sei sicuro di voler disattivare la password?')) {
+                this.setPassword(null);
+                this.showToast('Sicurezza', 'Password di accesso disattivata.', 'info');
+                this.showTutorMessage('Password disattivata. Non ti verrà più chiesta la password.');
+            }
+        }
+    }
+
+    changePassword() {
+        const input = document.getElementById('new-password');
+        const password = input ? input.value : '';
+        if (password && password.length >= 4) {
+            this.setPassword(password);
+            this.showToast('Sicurezza', 'Password cambiata con successo!', 'success');
+            if (input) input.value = '';
+        } else {
+            this.showToast('Sicurezza', 'La password deve essere di almeno 4 caratteri.', 'error');
         }
     }
 
@@ -3492,8 +3646,8 @@ class JeadOSApp {
     wakeUp() {
         const shutdownScreen = document.getElementById('shutdown-screen');
         shutdownScreen.classList.add('hidden');
-        this.showToast('Riaccensione', 'Bentornato in JeadOS!', 'success');
-        this.addNotification('Riaccensione', 'Bentornato in JeadOS!', 'success');
+        this.showToast('Riaccensione', 'Bentornato in AuraOS!', 'success');
+        this.addNotification('Riaccensione', 'Bentornato in AuraOS!', 'success');
         this.showTutorMessage('Bentornato! Sei di nuovo nel tuo computer virtuale.');
     }
 
@@ -3542,25 +3696,25 @@ class JeadOSApp {
 
     saveNotifications() {
         try {
-            localStorage.setItem('jeados_notifications', JSON.stringify(this.state.notifications));
+            localStorage.setItem('auraos_notifications', JSON.stringify(this.state.notifications));
         } catch (e) { }
     }
 
     saveTrash() {
         try {
-            localStorage.setItem('jeados_trash', JSON.stringify(this.state.trash));
+            localStorage.setItem('auraos_trash', JSON.stringify(this.state.trash));
         } catch (e) { }
     }
 
     saveRecentApps() {
         try {
-            localStorage.setItem('jeados_recent_apps', JSON.stringify(this.state.recentApps));
+            localStorage.setItem('auraos_recent_apps', JSON.stringify(this.state.recentApps));
         } catch (e) { }
     }
 
     saveRecentFiles() {
         try {
-            localStorage.setItem('jeados_recent_files', JSON.stringify(this.state.recentFiles));
+            localStorage.setItem('auraos_recent_files', JSON.stringify(this.state.recentFiles));
         } catch (e) { }
     }
 
@@ -3827,7 +3981,7 @@ class JeadOSApp {
         this.galleryCurrentIndex = this.galleryCurrentIndex || {};
         this.gallerySlideshowActive = this.gallerySlideshowActive || {};
 
-        const saved = localStorage.getItem('jeados_gallery') || localStorage.getItem('webos_gallery');
+        const saved = localStorage.getItem('auraos_gallery') || localStorage.getItem('webos_gallery');
         if (saved) {
             try {
                 this.galleryImages[windowId] = JSON.parse(saved);
@@ -3886,7 +4040,7 @@ class JeadOSApp {
 
     saveGallery(windowId) {
         try {
-            localStorage.setItem('jeados_gallery', JSON.stringify(this.galleryImages[windowId] || []));
+            localStorage.setItem('auraos_gallery', JSON.stringify(this.galleryImages[windowId] || []));
         } catch (e) {
             this.showToast('Errore', 'Spazio di archiviazione pieno. Elimina alcune immagini.', 'error');
         }
@@ -4113,7 +4267,7 @@ class JeadOSApp {
         this.musicRepeat = this.musicRepeat || {};
         this.musicRepeat[windowId] = false;
 
-        const saved = localStorage.getItem('jeados_music') || localStorage.getItem('webos_music');
+        const saved = localStorage.getItem('auraos_music') || localStorage.getItem('webos_music');
         if (saved) {
             try {
                 this.musicTracks[windowId] = JSON.parse(saved);
@@ -4179,7 +4333,7 @@ class JeadOSApp {
 
     saveMusic(windowId) {
         try {
-            localStorage.setItem('jeados_music', JSON.stringify(this.musicTracks[windowId] || []));
+            localStorage.setItem('auraos_music', JSON.stringify(this.musicTracks[windowId] || []));
         } catch (e) {
             this.showToast('Errore', 'Spazio di archiviazione pieno. Elimina alcuni brani.', 'error');
         }
@@ -4548,7 +4702,7 @@ class JeadOSApp {
 
     setAppearance(key, value) {
         this.state.appearance[key] = value;
-        const lsKey = 'jeados_' + key;
+        const lsKey = 'auraos_' + key;
         localStorage.setItem(lsKey, value);
         this.applyAppearanceSettings();
         this.showToast('Aspetto', 'Impostazioni aspetto aggiornate.', 'info', 2000);
@@ -4589,5 +4743,5 @@ class JeadOSApp {
 // Initialize app when DOM is ready
 let app;
 document.addEventListener('DOMContentLoaded', () => {
-    app = new JeadOSApp();
+    app = new AuraOSApp();
 });

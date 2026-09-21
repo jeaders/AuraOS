@@ -1,0 +1,43 @@
+{
+  "name": "AuraOS",
+  "short_name": "AuraOS",
+  "description": "Sistema operativo virtuale educativo in HTML/CSS/JS",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#667eea",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "utilities"],
+  "screenshots": [],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "File Manager",
+      "short_name": "File",
+      "description": "Gestisci i tuoi file",
+      "url": "/index.html?app=file-manager",
+      "icons": [{ "src": "icons/file-manager.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Terminale",
+      "short_name": "Terminal",
+      "description": "Riga di comando",
+      "url": "/index.html?app=terminal",
+      "icons": [{ "src": "icons/terminal.png", "sizes": "96x96" }]
+    }
+  ]
+}

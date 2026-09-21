@@ -1,0 +1,26 @@
+include README.md
+include LICENSE
+include CONTRIBUTING.md
+include CHANGELOG.md
+include RELEASE_NOTES.md
+include Makefile
+include MANIFEST.in
+include pyproject.toml
+include package.json
+include desktop/manifest.json
+recursive-include desktop *
+recursive-include kernel *
+recursive-include boot *
+recursive-include rootfs *
+recursive-include scripts *
+recursive-include docs *
+recursive-include .github *
+global-exclude .DS_Store
+global-exclude Thumbs.db
+global-exclude *.log
+global-exclude *.swp
+global-exclude *.swo
+global-exclude *~
+global-exclude *.iso
+global-exclude *.iso.sha256
+global-exclude *.deb

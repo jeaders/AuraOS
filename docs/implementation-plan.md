@@ -1,39 +1,42 @@
-# Piano di Implementazione - WebOS Educativo
+# Piano di Implementazione - AuraOS
 
 ## Panoramica
-WebOS Educativo è un OS virtuale in HTML/CSS/JS con finestre, app, tutor AI e filesystem simulato. Questo piano definisce i prossimi passaggi per renderlo più completo, stabile e sorprendente.
+AuraOS è una distribuzione Linux educativa basata su Debian, con kernel Linux personalizzato, bootloader GRUB e ambiente desktop web-based. Questo piano definisce i prossimi passaggi per rendere AuraOS una distro completa, stabile e facile da usare, simile a Zorin OS.
 
 ---
 
 ## 1. Priorità Alta (prossimi step)
 
 ### Core OS e stabilità
-- **Boot e login**
-  - Schermata di login con password opzionale (salvata in localStorage)
-  - Selezione utente multiplo con home directory separata
-  - Ripristino sessione: riapri le finestre chiuse all'ultimo avvio
-- **Window manager avanzato**
-  - Schede nelle finestre (tab bar)
-  - Aero Snap / Aero Peek simulati
-  - Minimizza tutte le finestre visibili
-  - Ordinamento finestre: cascata, affiancate, impila
-  - Trascinamento tra monitor virtuali (schermi multipli simulati)
-- **File Manager completo**
-  - Drag & drop tra cartelle e verso il desktop
-  - Copia/incolla/taglia (Ctrl+C/V/X)
-  - Cestino con ripristino
-  - Vista griglia e lista commutabile
-  - Anteprima file (immagini, testo, audio)
-  - Ordinamento per nome/data/tipo/dimensione
-  - Ricerca file integrata
-- **Sistema notifiche**
-  - Centro notifiche accessibile da taskbar
-  - Notifiche toast per azioni di sistema
-  - Badge sulle icone desktop
-- **Ricerca globale**
-  - Launcher/starter con barra di ricerca (tipo Spotlight)
-  - Cerca file, app, impostazioni
-  - Risultati in tempo reale mentre si digita
+- **Kernel Linux personalizzato**
+  - Ottimizzazione per desktop educativo
+  - Supporto hardware completo
+  - Branding AuraOS
+- **GRUB Bootloader**
+  - Tema personalizzato AuraOS
+  - Supporto BIOS/UEFI
+  - Opzioni di boot multiple
+- **Root filesystem**
+  - Debian Bookworm base
+  - Pacchetti minimi essenziali
+  - LightDM + Chromium kiosk
+- **Build system**
+  - Script automatizzati per build ISO
+  - Supporto QEMU per test
+  - Documentazione completa
+
+### Desktop Environment
+- **Chromium Kiosk**
+  - Avvio automatico senza login
+  - Carica AuraOS desktop
+  - Configurazione kiosk ottimizzata
+- **LightDM**
+  - Autologin utente auraos
+  - Session management
+- **AuraOS Desktop**
+  - Mantenimento interfaccia web esistente
+  - Integrazione con sistema Linux
+  - Accesso filesystem reale
 
 ### App nuove
 - **Galleria/Immagini**
@@ -70,7 +73,6 @@ WebOS Educativo è un OS virtuale in HTML/CSS/JS con finestre, app, tutor AI e f
 - **Multi-utente**
   - Cambio utente veloce
   - Sincronizzazione dati profilo
-  - Permessi differenziati (bambino/adulto/anziano)
 
 ### App esistenti migliorate
 - **Browser**
@@ -93,10 +95,6 @@ WebOS Educativo è un OS virtuale in HTML/CSS/JS con finestre, app, tutor AI e f
   - Tutorial interattivi con highlighting elementi UI
 
 ### UI/UX
-- **Dock laterale**
-  - Barra app preferiti sul lato (sinistra o destra)
-  - Icone grandi, hover espanso
-  - Possibilità di aggiungere/rimuovere app
 - **Widget desktop**
   - Note adesive (sticky notes)
   - Promemoria

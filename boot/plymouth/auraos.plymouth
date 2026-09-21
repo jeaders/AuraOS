@@ -1,0 +1,37 @@
+# AuraOS Splash Screen Configuration
+# Plymouth theme for AuraOS
+
+[Plymouth Theme]
+Name=AuraOS
+Description=AuraOS Boot Splash
+Comment=A modern, clean splash screen for AuraOS
+
+[Image]
+Title=/usr/share/plymouth/themes/auraos/bg.png
+Logo=/usr/share/plymouth/themes/auraos/logo.png
+
+[Script]
+Title=/usr/share/plymouth/themes/auraos/auraos.plymouth
+
+# Animation settings
+FadeInDuration=1.0
+FadeOutDuration=1.0
+ProgressFrames=60
+
+# Colors
+BackgroundColor=#0f172a
+ForegroundColor=#667eea
+TextColor=#ffffff
+
+# Progress bar
+ProgressBar=true
+ProgressBarColor=#667eea
+ProgressBarBackgroundColor=#1e293b
+
+# Spinner
+Spinner=true
+SpinnerColor=#667eea
+
+# Messages
+BootMessage="Avvio di AuraOS..."
+LoadingMessage="Caricamento..."

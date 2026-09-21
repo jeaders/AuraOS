@@ -3,10 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JeadOS</title>
+    <title>AuraOS</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AuraOS">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
 </head>
 <body>
+    <div id="login-screen" class="login-screen hidden">
+        <div class="login-content">
+            <div class="login-logo">
+                <svg width="60" height="60" viewBox="0 0 80 80" fill="none">
+                    <rect x="4" y="12" width="72" height="48" rx="8" stroke="white" stroke-width="3" fill="none"/>
+                    <rect x="24" y="60" width="32" height="4" rx="2" fill="white"/>
+                    <rect x="12" y="64" width="56" height="4" rx="2" fill="white"/>
+                    <path d="M40 4 L40 12" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="40" cy="4" r="2" fill="white"/>
+                </svg>
+            </div>
+            <h2 class="login-title">Accesso a AuraOS</h2>
+            <p class="login-user" id="login-user-name"></p>
+            <div class="login-form">
+                <input type="password" id="login-password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')app.doLogin()">
+                <button class="login-btn" onclick="app.doLogin()">Accedi</button>
+            </div>
+            <p class="login-error hidden" id="login-error">Password errata</p>
+        </div>
+    </div>
+
     <div id="boot-screen" class="boot-screen">
         <div class="boot-content">
             <div class="boot-logo">
@@ -18,7 +47,7 @@
                     <circle cx="40" cy="4" r="2" fill="white"/>
                 </svg>
             </div>
-            <h1 class="boot-title">JeadOS</h1>
+            <h1 class="boot-title">AuraOS</h1>
             <p class="boot-subtitle">Il tuo desktop virtuale, bello e semplice</p>
             <div class="boot-progress">
                 <div class="boot-progress-bar" id="boot-progress-bar"></div>
@@ -322,7 +351,7 @@
                     <line x1="12" y1="2" x2="12" y2="12"/>
                 </svg>
             </div>
-            <p class="shutdown-text">Arrivederci!</p>
+            <p class="shutdown-text">Arrivederci da AuraOS!</p>
             <button class="shutdown-btn" onclick="app.wakeUp()">Riaccendi</button>
         </div>
     </div>
@@ -382,5 +411,12 @@
 
     <script src="js/ai/tutor.js"></script>
     <script src="js/app.js"></script>
-</body>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
 </html>

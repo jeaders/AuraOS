@@ -6,21 +6,21 @@
 }
 
 :root {
-    --jeados-primary: #3b82f6;
-    --jeados-primary-dark: #2563eb;
-    --jeados-accent: #8b5cf6;
-    --jeados-success: #10b981;
-    --jeados-danger: #ef4444;
-    --jeados-warning: #f59e0b;
-    --jeados-bg: rgba(255, 255, 255, 0.85);
-    --jeados-bg-solid: #f8fafc;
-    --jeados-text: #1e293b;
-    --jeados-text-secondary: #64748b;
-    --jeados-border: rgba(0, 0, 0, 0.08);
-    --jeados-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    --jeados-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --jeados-radius: 12px;
-    --jeados-radius-sm: 8px;
+    --auraos-primary: #3b82f6;
+    --auraos-primary-dark: #2563eb;
+    --auraos-accent: #8b5cf6;
+    --auraos-success: #10b981;
+    --auraos-danger: #ef4444;
+    --auraos-warning: #f59e0b;
+    --auraos-bg: rgba(255, 255, 255, 0.85);
+    --auraos-bg-solid: #f8fafc;
+    --auraos-text: #1e293b;
+    --auraos-text-secondary: #64748b;
+    --auraos-border: rgba(0, 0, 0, 0.08);
+    --auraos-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    --auraos-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --auraos-radius: 12px;
+    --auraos-radius-sm: 8px;
     --top-bar-height: 32px;
     --dock-height: 64px;
 }
@@ -153,6 +153,115 @@ body {
 
 .profile-icon {
     font-size: 40px;
+}
+
+/* ===== Login Screen ===== */
+.login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.login-content {
+    text-align: center;
+    color: white;
+}
+
+.login-logo {
+    margin-bottom: 20px;
+}
+
+.login-title {
+    font-size: 28px;
+    font-weight: 300;
+    margin-bottom: 8px;
+}
+
+.login-user {
+    font-size: 16px;
+    color: #94a3b8;
+    margin-bottom: 30px;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+.login-input {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 16px;
+    width: 260px;
+    outline: none;
+    backdrop-filter: blur(10px);
+}
+
+.login-input::placeholder {
+    color: #64748b;
+}
+
+.login-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.login-btn {
+    background: #3b82f6;
+    border: none;
+    color: white;
+    padding: 12px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.login-btn:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+}
+
+.login-error {
+    color: #ef4444;
+    margin-top: 12px;
+    font-size: 14px;
+}
+
+.settings-input {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--auraos-border);
+    color: var(--auraos-text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 160px;
+    outline: none;
+}
+
+.settings-input:focus {
+    border-color: var(--auraos-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.settings-hint {
+    font-size: 12px;
+    color: var(--auraos-text-secondary);
+    margin-top: 6px;
 }
 
 /* ===== Top Bar ===== */
@@ -580,11 +689,11 @@ body {
 /* ===== Window Manager ===== */
 .window {
     position: absolute;
-    background: var(--jeados-bg);
+    background: var(--auraos-bg);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-radius: var(--jeados-radius);
-    box-shadow: var(--jeados-shadow);
+    border-radius: var(--auraos-radius);
+    box-shadow: var(--auraos-shadow);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -592,7 +701,7 @@ body {
     min-width: 320px;
     min-height: 200px;
     transition: box-shadow 0.2s ease, transform 0.15s ease;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
 }
 
 .window.active {
@@ -622,13 +731,13 @@ body {
     user-select: none;
     -webkit-user-select: none;
     background: transparent;
-    border-bottom: 1px solid var(--jeados-border);
+    border-bottom: 1px solid var(--auraos-border);
 }
 
 .window-title {
     font-size: 13px;
     font-weight: 600;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -701,8 +810,8 @@ body {
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-radius: var(--jeados-radius);
-    box-shadow: var(--jeados-shadow);
+    border-radius: var(--auraos-radius);
+    box-shadow: var(--auraos-shadow);
     z-index: 998;
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.08);
@@ -715,7 +824,7 @@ body {
 }
 
 .start-menu-header {
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     color: white;
     padding: 14px 16px;
     font-weight: 600;
@@ -734,7 +843,7 @@ body {
     border: none;
     color: #e2e8f0;
     padding: 10px 12px;
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     cursor: pointer;
     font-size: 13px;
     display: flex;
@@ -811,7 +920,7 @@ body {
 }
 
 .shutdown-btn {
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     border: none;
     color: white;
     padding: 12px 32px;
@@ -836,8 +945,8 @@ body {
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: var(--jeados-radius);
-    box-shadow: var(--jeados-shadow);
+    border-radius: var(--auraos-radius);
+    box-shadow: var(--auraos-shadow);
     z-index: 2000;
     padding: 16px;
     border: 1px solid rgba(255,255,255,0.08);
@@ -884,7 +993,7 @@ body {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     border: none;
     color: white;
     font-size: 18px;
@@ -910,10 +1019,10 @@ body {
     background: rgba(30, 41, 59, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: var(--jeados-radius);
+    border-radius: var(--auraos-radius);
     padding: 14px;
     color: white;
-    box-shadow: var(--jeados-shadow);
+    box-shadow: var(--auraos-shadow);
     border: 1px solid rgba(255,255,255,0.08);
     animation: weatherIn 0.5s ease;
     z-index: 5;
@@ -1037,8 +1146,8 @@ body {
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: var(--jeados-radius-sm);
-    box-shadow: var(--jeados-shadow);
+    border-radius: var(--auraos-radius-sm);
+    box-shadow: var(--auraos-shadow);
     z-index: 5000;
     min-width: 200px;
     padding: 6px;
@@ -1090,9 +1199,9 @@ body {
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     padding: 14px 18px;
-    box-shadow: var(--jeados-shadow);
+    box-shadow: var(--auraos-shadow);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1100,7 +1209,7 @@ body {
     max-width: 400px;
     pointer-events: auto;
     animation: toastIn 0.3s ease;
-    border-left: 3px solid var(--jeados-primary);
+    border-left: 3px solid var(--auraos-primary);
     color: #e2e8f0;
 }
 
@@ -1180,7 +1289,7 @@ body {
     position: absolute;
     top: 0px;
     right: 0px;
-    background: var(--jeados-danger);
+    background: var(--auraos-danger);
     color: white;
     font-size: 9px;
     font-weight: 700;
@@ -1200,8 +1309,8 @@ body {
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-radius: var(--jeados-radius);
-    box-shadow: var(--jeados-shadow);
+    border-radius: var(--auraos-radius);
+    box-shadow: var(--auraos-shadow);
     z-index: 2500;
     overflow: hidden;
     display: none;
@@ -1219,7 +1328,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     color: white;
 }
 
@@ -1331,8 +1440,8 @@ body {
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-radius: var(--jeados-radius);
-    box-shadow: var(--jeados-shadow);
+    border-radius: var(--auraos-radius);
+    box-shadow: var(--auraos-shadow);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1389,7 +1498,7 @@ body {
 
 .launcher-category-btn:hover,
 .launcher-category-btn.active {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
 }
 
@@ -1404,7 +1513,7 @@ body {
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     cursor: pointer;
     transition: all 0.15s ease;
 }
@@ -1473,7 +1582,7 @@ body {
     align-items: center;
     gap: 4px;
     padding: 8px 10px;
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     cursor: pointer;
     transition: all 0.2s ease;
     min-width: 64px;
@@ -1504,7 +1613,7 @@ body {
     align-items: center;
     padding: 8px 12px;
     background: rgba(255,255,255,0.5);
-    border-bottom: 1px solid var(--jeados-border);
+    border-bottom: 1px solid var(--auraos-border);
     gap: 8px;
     flex-wrap: wrap;
 }
@@ -1516,7 +1625,7 @@ body {
 
 .notepad-btn {
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     padding: 5px 10px;
     border-radius: 6px;
     cursor: pointer;
@@ -1524,19 +1633,19 @@ body {
     transition: all 0.2s ease;
     min-width: 32px;
     text-align: center;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .notepad-btn:hover {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .notepad-btn.active {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .notepad-size-btn {
@@ -1545,7 +1654,7 @@ body {
 
 .notepad-status {
     font-size: 12px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
 }
 
 .notepad-editor {
@@ -1558,7 +1667,7 @@ body {
     line-height: 1.7;
     outline: none;
     background: white;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     transition: border-color 0.2s ease;
     overflow-y: auto;
     white-space: pre-wrap;
@@ -1573,13 +1682,13 @@ body {
     padding: 8px 16px;
     display: flex;
     justify-content: flex-end;
-    border-top: 1px solid var(--jeados-border);
+    border-top: 1px solid var(--auraos-border);
     background: rgba(255,255,255,0.5);
 }
 
 .notepad-wordcount {
     font-size: 11px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
 }
 
 /* ===== App: Terminal ===== */
@@ -1736,20 +1845,20 @@ body {
     gap: 10px;
     padding: 12px;
     background: rgba(255,255,255,0.5);
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
 }
 
 .task-manager-title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .task-manager-stats {
     display: flex;
     gap: 12px;
     font-size: 12px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     flex-wrap: wrap;
 }
 
@@ -1757,12 +1866,12 @@ body {
     background: white;
     padding: 4px 10px;
     border-radius: 6px;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
 }
 
 .task-manager-refresh-btn {
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -1772,20 +1881,20 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .task-manager-refresh-btn:hover {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .task-manager-table-wrapper {
     flex: 1;
     overflow-y: auto;
-    border-radius: var(--jeados-radius-sm);
-    border: 1px solid var(--jeados-border);
+    border-radius: var(--auraos-radius-sm);
+    border: 1px solid var(--auraos-border);
 }
 
 .task-manager-table {
@@ -1803,9 +1912,9 @@ body {
 .task-manager-table th {
     padding: 10px 12px;
     text-align: left;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     font-weight: 600;
-    border-bottom: 2px solid var(--jeados-border);
+    border-bottom: 2px solid var(--auraos-border);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -1813,7 +1922,7 @@ body {
 
 .task-manager-table td {
     padding: 10px 12px;
-    border-bottom: 1px solid var(--jeados-border);
+    border-bottom: 1px solid var(--auraos-border);
     vertical-align: middle;
 }
 
@@ -1831,14 +1940,14 @@ body {
 .task-cpu-bar-bg {
     flex: 1;
     height: 8px;
-    background: var(--jeados-border);
+    background: var(--auraos-border);
     border-radius: 4px;
     overflow: hidden;
 }
 
 .task-cpu-bar {
     height: 100%;
-    background: linear-gradient(90deg, var(--jeados-success), #059669);
+    background: linear-gradient(90deg, var(--auraos-success), #059669);
     border-radius: 4px;
     transition: width 0.5s ease;
 }
@@ -1870,8 +1979,8 @@ body {
 
 .task-kill-btn {
     background: white;
-    border: 1px solid var(--jeados-danger);
-    color: var(--jeados-danger);
+    border: 1px solid var(--auraos-danger);
+    color: var(--auraos-danger);
     padding: 4px 10px;
     border-radius: 6px;
     cursor: pointer;
@@ -1880,7 +1989,7 @@ body {
 }
 
 .task-kill-btn:hover {
-    background: var(--jeados-danger);
+    background: var(--auraos-danger);
     color: white;
 }
 
@@ -1891,7 +2000,7 @@ body {
     padding: 12px;
     background: #1e293b;
     color: white;
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     font-size: 12px;
 }
 
@@ -1914,10 +2023,10 @@ body {
     background: rgba(30, 41, 59, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: var(--jeados-radius);
+    border-radius: var(--auraos-radius);
     padding: 14px;
     color: white;
-    box-shadow: var(--jeados-shadow);
+    box-shadow: var(--auraos-shadow);
     border: 1px solid rgba(255,255,255,0.08);
     animation: clockIn 0.5s ease;
     z-index: 5;
@@ -1948,9 +2057,9 @@ body {
 .clock-widget-calendar {
     margin-top: 12px;
     background: rgba(255, 255, 255, 0.95);
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     padding: 10px;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     text-align: left;
     animation: calIn 0.2s ease;
 }
@@ -1963,7 +2072,7 @@ body {
 .calendar-month {
     font-size: 13px;
     font-weight: 600;
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     text-align: center;
     margin-bottom: 8px;
 }
@@ -1978,7 +2087,7 @@ body {
 .cal-weekday {
     text-align: center;
     font-size: 10px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     font-weight: 600;
 }
 
@@ -1993,11 +2102,11 @@ body {
     padding: 3px;
     font-size: 11px;
     border-radius: 4px;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .cal-cell.cal-today {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
     font-weight: 700;
     border-radius: 50%;
@@ -2105,36 +2214,36 @@ body {
     gap: 10px;
     padding: 10px 12px;
     background: rgba(255,255,255,0.5);
-    border-bottom: 1px solid var(--jeados-border);
+    border-bottom: 1px solid var(--auraos-border);
     flex-wrap: wrap;
     align-items: center;
 }
 
 .file-manager-btn {
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     padding: 6px 14px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 13px;
     transition: all 0.2s ease;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .file-manager-btn:hover {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .file-manager-path {
     flex: 1;
     padding: 6px 12px;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     border-radius: 6px;
     background: white;
     font-size: 13px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
 }
 
 .file-breadcrumb {
@@ -2146,7 +2255,7 @@ body {
 }
 
 .breadcrumb-item {
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     cursor: pointer;
     padding: 2px 6px;
     border-radius: 4px;
@@ -2159,7 +2268,7 @@ body {
 }
 
 .breadcrumb-separator {
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
 }
 
 .fm-main {
@@ -2170,16 +2279,16 @@ body {
 }
 
 .fm-list-pane.drag-over {
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
     background: rgba(59, 130, 246, 0.04);
 }
 
 .fm-drop-zone {
     padding: 12px;
     text-align: center;
-    color: var(--jeados-text-secondary);
-    border: 2px dashed var(--jeados-border);
-    border-radius: var(--jeados-radius-sm);
+    color: var(--auraos-text-secondary);
+    border: 2px dashed var(--auraos-border);
+    border-radius: var(--auraos-radius-sm);
     margin: 10px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -2191,9 +2300,9 @@ body {
 }
 
 .fm-drop-zone.drag-over {
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
     background: rgba(59, 130, 246, 0.08);
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
 }
 
 .fm-drop-zone-icon {
@@ -2203,7 +2312,7 @@ body {
 
 .fm-preview-pane {
     width: 260px;
-    border-left: 1px solid var(--jeados-border);
+    border-left: 1px solid var(--auraos-border);
     border-radius: 0;
     background: rgba(255,255,255,0.8);
     padding: 16px;
@@ -2225,7 +2334,7 @@ body {
 .fm-preview-name {
     font-size: 15px;
     font-weight: 600;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     text-align: center;
     margin-bottom: 10px;
     word-break: break-word;
@@ -2233,7 +2342,7 @@ body {
 
 .fm-preview-info {
     font-size: 12px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     line-height: 1.8;
 }
 
@@ -2278,7 +2387,7 @@ body {
 
 .fm-list-item.drag-over {
     background: rgba(59, 130, 246, 0.1);
-    outline: 2px dashed var(--jeados-primary);
+    outline: 2px dashed var(--auraos-primary);
 }
 
 .fm-list-item.dragging {
@@ -2287,7 +2396,7 @@ body {
 
 .fm-list-item.cut-item {
     opacity: 0.5;
-    border: 1px dashed var(--jeados-danger);
+    border: 1px dashed var(--auraos-danger);
 }
 
 .fm-list-col-icon {
@@ -2299,14 +2408,14 @@ body {
 
 .fm-list-col-name {
     font-weight: 500;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .fm-list-col-size {
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     text-align: right;
 }
 
@@ -2319,7 +2428,7 @@ body {
 }
 
 .fm-list-col-date {
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     font-size: 12px;
 }
 
@@ -2336,7 +2445,7 @@ body {
     align-items: center;
     gap: 6px;
     padding: 10px;
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: center;
@@ -2349,12 +2458,12 @@ body {
 
 .fm-grid-item.selected {
     background: rgba(59, 130, 246, 0.1);
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .fm-grid-item.drag-over {
     background: rgba(59, 130, 246, 0.1);
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
     transform: scale(1.02);
 }
 
@@ -2364,7 +2473,7 @@ body {
 
 .fm-grid-item.cut-item {
     opacity: 0.5;
-    border: 2px dashed var(--jeados-danger);
+    border: 2px dashed var(--auraos-danger);
 }
 
 .fm-grid-icon {
@@ -2374,31 +2483,31 @@ body {
 .fm-grid-name {
     font-size: 11px;
     word-wrap: break-word;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     line-height: 1.3;
 }
 
 .fm-grid-size {
     font-size: 10px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
 }
 
 .fm-empty {
     text-align: center;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     padding: 40px;
     font-size: 14px;
 }
 
 .fm-no-results {
     text-align: center;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     padding: 40px;
     font-size: 14px;
 }
 
 .fm-trash-badge {
-    background: var(--jeados-danger);
+    background: var(--auraos-danger);
     color: white;
     font-size: 10px;
     padding: 1px 6px;
@@ -2417,12 +2526,12 @@ body {
     gap: 10px;
     padding: 10px 12px;
     background: rgba(255,255,255,0.5);
-    border-bottom: 1px solid var(--jeados-border);
+    border-bottom: 1px solid var(--auraos-border);
 }
 
 .browser-btn {
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     width: 32px;
     height: 32px;
     border-radius: 8px;
@@ -2432,44 +2541,44 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .browser-btn:hover {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .browser-url {
     flex: 1;
     padding: 6px 12px;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     border-radius: 8px;
     background: white;
     font-size: 13px;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .browser-content {
     padding: 20px;
     line-height: 1.7;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .browser-content h2 {
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     margin-bottom: 16px;
 }
 
 .browser-content a {
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     text-decoration: underline;
     cursor: pointer;
 }
 
 .browser-content a:hover {
-    color: var(--jeados-accent);
+    color: var(--auraos-accent);
 }
 
 /* ===== App: Tutor Chat ===== */
@@ -2486,7 +2595,7 @@ body {
     overflow-y: auto;
     padding: 12px;
     background: rgba(255,255,255,0.5);
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -2501,7 +2610,7 @@ body {
 }
 
 .tutor-message.user {
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     color: white;
     align-self: flex-end;
     border-bottom-right-radius: 4px;
@@ -2509,10 +2618,10 @@ body {
 
 .tutor-message.tutor {
     background: white;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     align-self: flex-start;
     border-bottom-left-radius: 4px;
-    box-shadow: var(--jeados-shadow-sm);
+    box-shadow: var(--auraos-shadow-sm);
 }
 
 .tutor-input-area {
@@ -2523,21 +2632,21 @@ body {
 .tutor-input {
     flex: 1;
     padding: 10px 14px;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     border-radius: 10px;
     font-size: 14px;
     outline: none;
     transition: all 0.2s ease;
     background: white;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .tutor-input:focus {
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .tutor-send {
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     border: none;
     color: white;
     padding: 10px 20px;
@@ -2561,19 +2670,19 @@ body {
 
 .tutor-suggestion {
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     padding: 6px 12px;
     border-radius: 20px;
     cursor: pointer;
     font-size: 12px;
     transition: all 0.2s ease;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .tutor-suggestion:hover {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 /* ===== App: Settings ===== */
@@ -2583,7 +2692,7 @@ body {
 }
 
 .settings-section h3 {
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     margin-bottom: 14px;
     font-size: 16px;
     font-weight: 600;
@@ -2595,14 +2704,14 @@ body {
     align-items: center;
     padding: 12px;
     background: rgba(255,255,255,0.5);
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     margin-bottom: 8px;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
 }
 
 .settings-label {
     font-size: 14px;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .settings-control {
@@ -2612,45 +2721,45 @@ body {
 
 .settings-btn {
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
     transition: all 0.2s ease;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .settings-btn:hover {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .settings-btn.active {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 /* ===== App: Guide ===== */
 .guide-step {
     background: rgba(255,255,255,0.6);
     padding: 20px;
-    border-radius: var(--jeados-radius);
+    border-radius: var(--auraos-radius);
     margin-bottom: 16px;
-    border-left: 4px solid var(--jeados-primary);
-    border: 1px solid var(--jeados-border);
-    border-left: 4px solid var(--jeados-primary);
+    border-left: 4px solid var(--auraos-primary);
+    border: 1px solid var(--auraos-border);
+    border-left: 4px solid var(--auraos-primary);
 }
 
 .guide-step h3 {
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     margin-bottom: 10px;
 }
 
 .guide-step p {
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     line-height: 1.7;
     margin-bottom: 10px;
 }
@@ -2662,7 +2771,7 @@ body {
 }
 
 .guide-btn {
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     border: none;
     color: white;
     padding: 8px 20px;
@@ -2691,14 +2800,14 @@ body {
 }
 
 .game-title {
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     font-size: 22px;
     margin-bottom: 20px;
 }
 
 .game-area {
     background: rgba(255,255,255,0.5);
-    border-radius: var(--jeados-radius);
+    border-radius: var(--auraos-radius);
     padding: 20px;
     margin-bottom: 16px;
     min-height: 200px;
@@ -2707,7 +2816,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 16px;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
 }
 
 .drag-drop-game {
@@ -2721,8 +2830,8 @@ body {
 .drop-zone {
     width: 110px;
     height: 110px;
-    border: 2px dashed var(--jeados-border);
-    border-radius: var(--jeados-radius-sm);
+    border: 2px dashed var(--auraos-border);
+    border-radius: var(--auraos-radius-sm);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2732,19 +2841,19 @@ body {
 }
 
 .drop-zone.drag-over {
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
     background: rgba(59, 130, 246, 0.08);
 }
 
 .drag-item {
     padding: 10px 14px;
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     border-radius: 8px;
     cursor: grab;
     font-size: 14px;
     transition: all 0.2s ease;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .drag-item:active {
@@ -2789,7 +2898,7 @@ body {
 .calc-history-panel {
     width: 160px;
     background: #1e293b;
-    border-radius: var(--jeados-radius);
+    border-radius: var(--auraos-radius);
     padding: 10px;
     max-height: 420px;
     display: flex;
@@ -2862,9 +2971,9 @@ body {
     max-width: 260px;
     margin: 0 auto;
     background: #1e293b;
-    border-radius: var(--jeados-radius);
+    border-radius: var(--auraos-radius);
     padding: 16px;
-    box-shadow: var(--jeados-shadow);
+    box-shadow: var(--auraos-shadow);
     flex-shrink: 0;
 }
 
@@ -2918,7 +3027,7 @@ body {
 }
 
 .calc-btn.calc-clear {
-    background: var(--jeados-danger);
+    background: var(--auraos-danger);
 }
 
 .calc-btn.calc-clear:hover {
@@ -2926,7 +3035,7 @@ body {
 }
 
 .calc-btn.calc-equal {
-    background: var(--jeados-success);
+    background: var(--auraos-success);
 }
 
 .calc-btn.calc-equal:hover {
@@ -2951,16 +3060,16 @@ body {
 }
 
 .file-info-dialog h3 {
-    color: var(--jeados-primary);
+    color: var(--auraos-primary);
     margin-bottom: 14px;
 }
 
 .file-info-dialog .info-box {
     background: rgba(255,255,255,0.6);
     padding: 14px;
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     line-height: 2;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
 }
 
 /* ===== App: Gallery ===== */
@@ -2977,7 +3086,7 @@ body {
     align-items: center;
     padding: 10px 12px;
     background: rgba(255,255,255,0.5);
-    border-bottom: 1px solid var(--jeados-border);
+    border-bottom: 1px solid var(--auraos-border);
     flex-wrap: wrap;
     gap: 10px;
 }
@@ -2985,7 +3094,7 @@ body {
 .gallery-title {
     font-size: 15px;
     font-weight: 600;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .gallery-controls {
@@ -2996,11 +3105,11 @@ body {
 
 .gallery-count {
     font-size: 13px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
 }
 
 .gallery-upload-btn {
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     border: none;
     color: white;
     padding: 8px 16px;
@@ -3032,7 +3141,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 40px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     text-align: center;
     gap: 10px;
     height: 100%;
@@ -3061,18 +3170,18 @@ body {
 
 .gallery-item {
     position: relative;
-    border-radius: var(--jeados-radius-sm);
+    border-radius: var(--auraos-radius-sm);
     overflow: hidden;
     cursor: pointer;
     transition: all 0.2s ease;
     background: rgba(0,0,0,0.03);
     aspect-ratio: 1;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
 }
 
 .gallery-item:hover {
     transform: scale(1.03);
-    box-shadow: var(--jeados-shadow-sm);
+    box-shadow: var(--auraos-shadow-sm);
 }
 
 .gallery-thumb {
@@ -3085,11 +3194,11 @@ body {
 .gallery-item-name {
     padding: 8px;
     font-size: 11px;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     text-align: center;
     word-break: break-all;
     background: white;
-    border-top: 1px solid var(--jeados-border);
+    border-top: 1px solid var(--auraos-border);
 }
 
 .gallery-item-delete {
@@ -3116,7 +3225,7 @@ body {
 }
 
 .gallery-item-delete:hover {
-    background: var(--jeados-danger);
+    background: var(--auraos-danger);
     color: white;
 }
 
@@ -3238,7 +3347,7 @@ body {
 
 .music-sidebar {
     width: 250px;
-    border-right: 1px solid var(--jeados-border);
+    border-right: 1px solid var(--auraos-border);
     display: flex;
     flex-direction: column;
     background: rgba(255,255,255,0.4);
@@ -3250,13 +3359,13 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 12px;
-    border-bottom: 1px solid var(--jeados-border);
+    border-bottom: 1px solid var(--auraos-border);
 }
 
 .music-sidebar-title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .music-playlist {
@@ -3282,7 +3391,7 @@ body {
 
 .music-track-item.playing {
     background: rgba(59, 130, 246, 0.1);
-    border-left: 3px solid var(--jeados-primary);
+    border-left: 3px solid var(--auraos-primary);
 }
 
 .music-track-info {
@@ -3293,7 +3402,7 @@ body {
 .music-track-name {
     font-size: 13px;
     font-weight: 500;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3301,13 +3410,13 @@ body {
 
 .music-track-duration {
     font-size: 11px;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
 }
 
 .music-track-delete {
     background: none;
     border: none;
-    color: var(--jeados-text-secondary);
+    color: var(--auraos-text-secondary);
     cursor: pointer;
     font-size: 14px;
     padding: 4px;
@@ -3316,7 +3425,7 @@ body {
 }
 
 .music-track-delete:hover {
-    color: var(--jeados-danger);
+    color: var(--auraos-danger);
     background: rgba(239, 68, 68, 0.1);
 }
 
@@ -3343,7 +3452,7 @@ body {
 
 .music-visualizer-bar {
     width: 8px;
-    background: linear-gradient(180deg, var(--jeados-primary), var(--jeados-accent));
+    background: linear-gradient(180deg, var(--auraos-primary), var(--auraos-accent));
     border-radius: 4px;
     animation: visualizerBounce 0.8s ease-in-out infinite;
 }
@@ -3380,7 +3489,7 @@ body {
 .music-now-playing-name {
     font-size: 15px;
     font-weight: 600;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
     word-break: break-word;
     text-align: center;
     max-width: 300px;
@@ -3394,7 +3503,7 @@ body {
 
 .music-btn {
     background: white;
-    border: 1px solid var(--jeados-border);
+    border: 1px solid var(--auraos-border);
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -3404,13 +3513,13 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    color: var(--jeados-text);
+    color: var(--auraos-text);
 }
 
 .music-btn:hover {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
     transform: scale(1.05);
 }
 
@@ -3418,7 +3527,7 @@ body {
     width: 56px;
     height: 56px;
     font-size: 20px;
-    background: linear-gradient(135deg, var(--jeados-primary) 0%, var(--jeados-accent) 100%);
+    background: linear-gradient(135deg, var(--auraos-primary) 0%, var(--auraos-accent) 100%);
     color: white;
     border: none;
 }
@@ -3435,9 +3544,9 @@ body {
 }
 
 .music-btn.active {
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     color: white;
-    border-color: var(--jeados-primary);
+    border-color: var(--auraos-primary);
 }
 
 .music-progress-wrapper {
@@ -3458,7 +3567,7 @@ body {
 .music-progress {
     flex: 1;
     height: 8px;
-    background: var(--jeados-border);
+    background: var(--auraos-border);
     border-radius: 4px;
     cursor: pointer;
     position: relative;
@@ -3467,7 +3576,7 @@ body {
 
 .music-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--jeados-primary), var(--jeados-accent));
+    background: linear-gradient(90deg, var(--auraos-primary), var(--auraos-accent));
     border-radius: 4px;
     width: 0%;
     transition: width 0.1s linear;
@@ -3495,7 +3604,7 @@ body {
     height: 6px;
     -webkit-appearance: none;
     appearance: none;
-    background: var(--jeados-border);
+    background: var(--auraos-border);
     border-radius: 3px;
     outline: none;
 }
@@ -3506,7 +3615,7 @@ body {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     cursor: pointer;
     border: none;
 }
@@ -3515,7 +3624,7 @@ body {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: var(--jeados-primary);
+    background: var(--auraos-primary);
     cursor: pointer;
     border: none;
 }
@@ -3703,6 +3812,6 @@ body.high-contrast .window-titlebar {
 }
 
 *:focus-visible {
-    outline: 2px solid var(--jeados-primary);
+    outline: 2px solid var(--auraos-primary);
     outline-offset: 2px;
 }
