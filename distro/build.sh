@@ -26,8 +26,10 @@ sudo debootstrap --arch=amd64 --variant=minbase \
 
 # Step 2: Copy AuraOS configuration
 echo "[2/6] Copying AuraOS configuration..."
+sudo mkdir -p "${BUILD_DIR}/rootfs/usr/share/auraos/packages"
 sudo cp -r "${SCRIPT_DIR}/debian/etc" "${BUILD_DIR}/rootfs/"
 sudo cp -r "${SCRIPT_DIR}/debian/boot" "${BUILD_DIR}/rootfs/"
+sudo cp "${SCRIPT_DIR}/packages/base.list" "${BUILD_DIR}/rootfs/usr/share/auraos/packages/base.list"
 
 # Step 3: Install packages
 echo "[3/6] Installing packages..."
