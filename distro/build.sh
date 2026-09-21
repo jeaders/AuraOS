@@ -20,7 +20,7 @@ mkdir -p "${BUILD_DIR}"
 # Step 1: Create rootfs with debootstrap
 echo "[1/6] Creating root filesystem with debootstrap..."
 sudo debootstrap --arch=amd64 --variant=minbase \
-    --include="systemd,systemd-sysv,dbus,udev" \
+    --include="systemd,systemd-sysv,dbus,udev,linux-image-amd64,linux-headers-amd64" \
     bookworm "${BUILD_DIR}/rootfs" \
     http://deb.debian.org/debian
 
@@ -36,7 +36,8 @@ echo "[3/6] Installing packages..."
 sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
-    apt-get install -y $(cat /usr/share/auraos/packages/base.list | grep -v '^#' | xargs)
+    apt-get install -y linux-image-amd64 linux-headers-amd64
+    apt-get install -y $(grep -v '^#' /usr/share/auraos/packages/base.list | xargs)
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 "
@@ -113,8 +114,19 @@ mkdir -p "${ISO_DIR}/boot/grub/i386-pc"
 mkdir -p "${ISO_DIR}/boot/grub/x86_64-efi"
 
 # Copy kernel and initrd
-cp "${BUILD_DIR}/rootfs/boot/vmlinuz-"* "${ISO_DIR}/live/vmlinuz"
-cp "${BUILD_DIR}/rootfs/boot/initrd.img-"* "${ISO_DIR}/live/initrd.img"
+shopt -s nullglob
+
+vmlinuz=( "${BUILD_DIR}/rootfs/boot"/vmlinuz-* )
+initrd=( "${BUILD_DIR}/rootfs/boot"/initrd.img-* )
+
+if [ "${#vmlinuz[@]}" -eq 0 ] || [ "${#initrd[@]}" -eq 0 ]; then
+    echo "ERROR: no kernel/initramfs found in ${BUILD_DIR}/rootfs/boot"
+    echo "Install linux-image-amd64 in the target system before building the ISO."
+    exit 1
+fi
+
+cp "${vmlinuz[0]}" "${ISO_DIR}/live/vmlinuz"
+cp "${initrd[0]}" "${ISO_DIR}/live/initrd.img"
 
 # Copy squashfs
 cp "${BUILD_DIR}/filesystem.squashfs" "${ISO_DIR}/live/"
