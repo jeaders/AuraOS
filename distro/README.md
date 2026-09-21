@@ -286,6 +286,14 @@ AuraOS/
 └── README.md
 ```
 
+## Build CI
+
+L'ISO di AuraOS viene buildata automaticamente su GitHub Actions ad ogni push su `real-distro`.
+
+[![Build ISO](https://github.com/jeaders/AuraOS/actions/workflows/ci.yml/badge.svg?branch=real-distro)](https://github.com/jeaders/AuraOS/actions/workflows/ci.yml)
+
+Gli artifact sono disponibili nella sezione Actions del repository.
+
 ## Supporto
 
 - **GitHub**: https://github.com/jeaders/AuraOS
