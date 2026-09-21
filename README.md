@@ -19,18 +19,23 @@
 ### Desktop Environment
 - Interfaccia web-based (HTML/CSS/JS) con design **glassmorphism**
 - **Chromium** in kiosk mode come shell
-- Boot screen moderno con barra di avanzamento
+- Boot screen moderno con barra di avanzamento e messaggi di stato
 - Login screen con password opzionale
-- Quick settings panel per controlli rapidi
+- Quick Settings panel (WiFi, Bluetooth, Dark Mode, Non disturbare)
 - Dashboard con statistiche sistema in tempo reale
-- Tutte le app: File Manager, Terminale, Browser, Tutor AI, Galleria, Musica, Calcolatrice
+- App Store con 42+ applicazioni
+- **27 app preinstallate**: File Manager, Terminale con tab, Browser, Tutor AI, Galleria, Musica, Calcolatrice, Editor di Testo, Visualizzatore Immagini, Video Player, PDF Viewer, Gestore Archivi, Monitor di Sistema, Utilizzo Disco, Screenshot, Registratore Schermo, Meteo, Calendario, Contatti, Note, Attività e altro
 
 ### Innovazione
 - **Design moderno**: Glassmorphism, animazioni fluide, transizioni smooth
-- **Quick Settings**: Accesso rapido a WiFi, Bluetooth, Dark Mode, Non disturbare
-- **Dashboard**: Widget sistema, prestazioni, meteo in tempo reale
+- **App Store funzionale**: Cerca, installa, disinstalla app con click
+- **Terminale avanzato**: Tab multiple, AI assist, autocompletamento
+- **Workspace switcher visuale**: Anteprime live degli spazi di lavoro
+- **Widget desktop interattivi**: Meteo, sistema, orologio, sticky notes
+- **Centro notifiche moderno**: Raggruppate per data, azioni rapide, Do Not Disturb
+- **Effetti finestre avanzati**: Open/close/minimize/maximize animations
 - **Tutor AI integrato**: Assistente educativo contestuale
-- **Multi-workspace**: Gestione spazi di lavoro multipli
+- **Multi-workspace**: Gestione spazi di lavoro multipli con anteprima
 - **Notifiche intelligenti**: Centro notifiche con badge e toast
 - **Launcher globale**: Ricerca veloce app, file e impostazioni
 
@@ -90,43 +95,50 @@ VBoxManage startvm AuraOS --type gui
 
 ```
 AuraOS/
-├── desktop/              # Interfaccia web
+├── desktop/                  # Interfaccia web moderna
 │   ├── index.html
-│   ├── css/
-│   ├── js/
-│   ├── manifest.json
-│   └── sw.js
-├── kernel/               # Kernel Linux personalizzato
+│   ├── css/style.css        # Glassmorphism design system
+│   ├── js/app.js            # Core OS e window manager
+│   ├── js/ai/tutor.js       # Tutor AI
+│   ├── manifest.json        # PWA manifest
+│   └── sw.js               # Service Worker
+├── kernel/                   # Kernel Linux personalizzato
 │   ├── config
 │   ├── build.sh
 │   └── patches/
-├── boot/                 # Bootloader GRUB
+├── boot/                     # Bootloader GRUB
 │   ├── grub/
 │   │   ├── grub.cfg
 │   │   └── theme/
 │   └── isolinux/
-├── rootfs/               # Filesystem radice
+├── rootfs/                   # Filesystem radice
 │   ├── etc/
-│   ├── usr/share/auraos/
-│   └── ...
-├── iso/                  # Build ISO
-├── scripts/              # Script di build
+│   └── usr/share/auraos/
+├── iso/                      # Build ISO
+├── scripts/                  # Script di build
 │   ├── build-all.sh
 │   ├── build-kernel.sh
 │   ├── build-rootfs.sh
 │   ├── build-iso.sh
+│   ├── build-initramfs.sh
 │   └── setup-dev.sh
-├── docs/                 # Documentazione
+├── docs/                     # Documentazione
+│   ├── build.md
+│   ├── installation.md
+│   ├── configuration.md
+│   ├── troubleshooting.md
 │   ├── kernel.md
 │   ├── grub.md
-│   ├── filesystem.md
-│   └── build.md
-├── package.json          # Electron wrapper (opzionale)
+│   └── filesystem.md
+├── package.json              # Electron wrapper (opzionale)
 ├── main.js
 ├── preload.js
-├── .github/workflows/ci.yml
+├── Makefile                  # Build automation
+├── .github/workflows/ci.yml  # CI/CD
 ├── LICENSE
 ├── CONTRIBUTING.md
+├── CHANGELOG.md
+├── RELEASE_NOTES.md
 └── README.md
 ```
 
