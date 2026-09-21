@@ -38,12 +38,32 @@ sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
     apt-get update
     apt-get install -y linux-image-amd64 linux-headers-amd64
     apt-get install -y $(grep -v '^#' /usr/share/auraos/packages/base.list | xargs)
+    apt-get install -y squashfs-tools
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 "
 
-# Step 4: Configure system
-echo "[4/6] Configuring system..."
+# Step 4: Regenerate initramfs with live boot support
+echo "[4/6] Regenerating initramfs..."
+sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
+    export DEBIAN_FRONTEND=noninteractive
+
+    mkdir -p /etc/initramfs-tools/conf.d
+
+    # Ensure squashfs and loop modules are included in initramfs
+    {
+        echo 'squashfs'
+        echo 'loop'
+    } >> /etc/initramfs-tools/modules
+
+    # Disable resume if no swap is configured
+    echo 'RESUME=none' > /etc/initramfs-tools/conf.d/resume
+
+    update-initramfs -c -k all
+"
+
+# Step 5: Configure system
+echo "[5/6] Configuring system..."
 sudo chroot "${BUILD_DIR}/rootfs" /bin/bash -c "
     export DEBIAN_FRONTEND=noninteractive
 
