@@ -556,7 +556,11 @@ class AuraOSApp {
             'text-editor', 'image-viewer', 'video-player', 'pdf-viewer',
             'archive-manager', 'system-monitor', 'disk-usage', 'font-viewer',
             'screenshot', 'screen-recorder', 'weather-app', 'calendar',
-            'contacts', 'notes-app', 'tasks'
+            'contacts', 'notes-app', 'tasks', 'code-editor', 'password-manager',
+            'email-client', 'chat-app', 'photo-editor', 'video-editor',
+            '3d-viewer', 'clock-app', 'map-app', 'notes-pro', 'whiteboard',
+            'calibre', 'scan-app', 'remote-desktop', 'backup-app',
+            'paint-app', 'fitness-app', 'camera-app', 'reminder-app', 'plugin-manager'
         ];
         const installed = this.getInstalledApps();
         let changed = false;
@@ -1091,15 +1095,28 @@ class AuraOSApp {
             return;
         }
         const windowId = `window-${Date.now()}`;
+        const isMobile = window.innerWidth < 768;
+        const isSmallMobile = window.innerWidth < 480;
+        let width, height;
+        if (isSmallMobile) {
+            width = window.innerWidth * 0.95;
+            height = window.innerHeight - 120;
+        } else if (isMobile) {
+            width = window.innerWidth * 0.92;
+            height = window.innerHeight - 110;
+        } else {
+            width = appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : appId === 'terminal' ? 700 : appId === 'task-manager' ? 600 : appId === 'gallery' ? 700 : appId === 'music' ? 750 : appId === 'app-store' ? 800 : 600;
+            height = appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : appId === 'terminal' ? 450 : appId === 'task-manager' ? 500 : appId === 'gallery' ? 500 : appId === 'music' ? 500 : appId === 'app-store' ? 600 : 450;
+        }
         const windowData = {
             id: windowId,
             appId: appId,
             title: appConfig.name,
             icon: appConfig.icon,
-            x: 50 + (this.state.openWindows.length * 30),
-            y: 50 + (this.state.openWindows.length * 30),
-            width: appId === 'tutor' ? 400 : appId === 'notepad' ? 550 : appId === 'terminal' ? 700 : appId === 'task-manager' ? 600 : appId === 'gallery' ? 700 : appId === 'music' ? 750 : appId === 'app-store' ? 800 : 600,
-            height: appId === 'tutor' ? 500 : appId === 'notepad' ? 500 : appId === 'terminal' ? 450 : appId === 'task-manager' ? 500 : appId === 'gallery' ? 500 : appId === 'music' ? 500 : appId === 'app-store' ? 600 : 450,
+            x: Math.min(50 + (this.state.openWindows.length * 30), Math.max(10, window.innerWidth - width - 10)),
+            y: Math.min(50 + (this.state.openWindows.length * 30), Math.max(40, window.innerHeight - height - 80)),
+            width: width,
+            height: height,
             minimized: false,
             maximized: false,
             workspaceId: this.state.currentWorkspace,
@@ -1124,8 +1141,8 @@ class AuraOSApp {
         const win = document.createElement('div');
         win.className = 'window active';
         win.id = windowData.id;
-        win.style.left = windowData.x + 'px';
-        win.style.top = windowData.y + 'px';
+        win.style.left = Math.min(windowData.x, Math.max(0, window.innerWidth - windowData.width)) + 'px';
+        win.style.top = Math.min(windowData.y, Math.max(36, window.innerHeight - windowData.height - 68)) + 'px';
         win.style.width = windowData.width + 'px';
         win.style.height = windowData.height + 'px';
         win.style.zIndex = ++this.state.windowZIndex;
@@ -1182,6 +1199,8 @@ class AuraOSApp {
                 return this.getMusicContent(windowId);
             case 'app-store':
                 return this.getAppStoreContent(windowId);
+            case 'plugin-manager':
+                return this.getPluginManagerContent(windowId);
             default:
                 return '<p>App in caricamento...</p>';
         }
@@ -1503,6 +1522,23 @@ class AuraOSApp {
             const ct = this.getActiveTab(windowId);
             if (!ct) return;
             
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'c') {
+                    e.preventDefault();
+                    if (input.value.trim()) {
+                        this.terminalPrint(windowId, `^C${input.value ? ' (interrotto)' : ''}`, 'output');
+                        input.value = '';
+                    }
+                    return;
+                }
+                if (e.key === 'l') {
+                    e.preventDefault();
+                    const out = document.getElementById(`terminal-output-${windowId}`);
+                    if (out) out.innerHTML = '';
+                    return;
+                }
+            }
+            
             if (e.key === 'Enter') {
                 const cmd = input.value.trim();
                 input.value = '';
@@ -1641,12 +1677,26 @@ class AuraOSApp {
                     ['touch <nome>', 'Crea un nuovo file vuoto'],
                     ['cat <file>', 'Legge il contenuto di un file'],
                     ['echo <testo>', 'Stampa a schermo il testo'],
-                    ['clear', 'Pulisce lo schermo'],
+                    ['clear / cls', 'Pulisce lo schermo'],
                     ['whoami', 'Mostra l\'utente corrente'],
+                    ['hostname', 'Mostra il nome del sistema'],
+                    ['uname', 'Mostra informazioni di sistema'],
                     ['date', 'Mostra data e ora correnti'],
-                    ['neofetch', 'Mostra informazioni di sistema'],
-                    ['rm <nome>', 'Elimina un file o cartella'],
+                    ['uptime', 'Mostra il tempo di attività'],
                     ['history', 'Mostra la cronologia comandi'],
+                    ['neofetch', 'Mostra informazioni di sistema ASCII'],
+                    ['calc <expr>', 'Calcolatrice semplice'],
+                    ['weather', 'Mostra informazioni meteo'],
+                    ['theme <nome>', 'Cambia tema (light/dark/aurora/matrix)'],
+                    ['apps', 'Lista app installate'],
+                    ['open <app>', 'Apri un\'applicazione'],
+                    ['screenshot', 'Cattura schermata'],
+                    ['reboot', 'Riavvia il sistema'],
+                    ['shutdown', 'Spegni il sistema'],
+                    ['sudo <cmd>', 'Esegui comando come admin (simulato)'],
+                    ['cowsay <testo>', 'ASCII cow che dice qualcosa'],
+                    ['matrix', 'Effetto matrix'],
+                    ['rm <nome>', 'Elimina un file o cartella'],
                     ['ai explain <cmd>', 'Spiega un comando'],
                 ];
                 cmds.forEach(([c, d]) => this.terminalPrint(windowId, `  ${c.padEnd(20)} ${d}`, 'output'));
@@ -1787,6 +1837,149 @@ class AuraOSApp {
                 ct.history.forEach((h, i) => this.terminalPrint(windowId, `  ${(i + 1).toString().padStart(4)}  ${h}`, 'output'));
                 break;
 
+            case 'cls':
+            case 'clear': {
+                const out = document.getElementById(`terminal-output-${windowId}`);
+                if (out) out.innerHTML = '';
+                break;
+            }
+            case 'hostname':
+                this.terminalPrint(windowId, 'auraos', 'output');
+                break;
+
+            case 'uname':
+                this.terminalPrint(windowId, 'AuraOS 1.0 x86_64', 'output');
+                break;
+
+            case 'uptime':
+                this.terminalPrint(windowId, `up ${this.getUptime()}`, 'output');
+                break;
+
+            case 'calc': {
+                if (!args[0]) {
+                    this.terminalPrint(windowId, 'calc: manca l\'espressione', 'error');
+                    break;
+                }
+                try {
+                    const expr = args.join(' ').replace(/[^0-9+\-*/().]/g, '');
+                    const result = Function('"use strict"; return (' + expr + ')')();
+                    this.terminalPrint(windowId, String(result), 'output');
+                } catch (e) {
+                    this.terminalPrint(windowId, 'calc: espressione non valida', 'error');
+                }
+                break;
+            }
+
+            case 'weather': {
+                const weatherData = this.generateWeatherData();
+                this.terminalPrint(windowId, `Meteo: ${weatherData.city}, ${weatherData.country}`, 'output');
+                this.terminalPrint(windowId, `Condizione: ${weatherData.condition} ${weatherData.icon}`, 'output');
+                this.terminalPrint(windowId, `Temperatura: ${weatherData.temp}°C`, 'output');
+                this.terminalPrint(windowId, `Umidità: ${weatherData.humidity}%`, 'output');
+                this.terminalPrint(windowId, `Vento: ${weatherData.wind} km/h`, 'output');
+                break;
+            }
+
+            case 'theme': {
+                const themeName = args[0];
+                if (!themeName) {
+                    this.terminalPrint(windowId, 'Utilizzo: theme <nome>', 'output');
+                    this.terminalPrint(windowId, 'Temi disponibili: light, dark, zorin-blue, aurora, matrix, auto', 'output');
+                    break;
+                }
+                const validThemes = ['light', 'dark', 'zorin-blue', 'aurora', 'matrix', 'auto'];
+                if (!validThemes.includes(themeName)) {
+                    this.terminalPrint(windowId, `theme: tema "${themeName}" non valido. Temi disponibili: ${validThemes.join(', ')}`, 'error');
+                    break;
+                }
+                this.state.appearance.theme = themeName;
+                localStorage.setItem('auraos_theme', themeName);
+                this.applyAppearanceSettings();
+                this.terminalPrint(windowId, `Tema cambiato in: ${themeName}`, 'output');
+                break;
+            }
+
+            case 'apps': {
+                const installed = this.getInstalledApps();
+                this.terminalPrint(windowId, 'App installate:', 'output');
+                installed.forEach(appId => {
+                    const appData = this.desktopApps.find(a => a.id === appId);
+                    const appStoreData = this.getAppStoreApps().find(a => a.id === appId);
+                    const name = (appData || appStoreData || { name: appId }).name;
+                    this.terminalPrint(windowId, `  - ${name} (${appId})`, 'output');
+                });
+                break;
+            }
+
+            case 'open': {
+                if (!args[0]) {
+                    this.terminalPrint(windowId, 'Utilizzo: open <nome-app>', 'error');
+                    break;
+                }
+                const appName = args[0].toLowerCase();
+                const appData = this.desktopApps.find(a => a.id === appName || a.name.toLowerCase().includes(appName));
+                if (appData) {
+                    this.terminalPrint(windowId, `Apertura di ${appData.name}...`, 'output');
+                    this.openApp(appData.id);
+                } else {
+                    this.terminalPrint(windowId, `open: app "${args[0]}" non trovata`, 'error');
+                }
+                break;
+            }
+
+            case 'screenshot':
+                this.terminalPrint(windowId, '📸 Screenshot salvato in /home/utente/Immagini/screenshot.png', 'output');
+                this.showToast('Screenshot', 'Screenshot salvato con successo!', 'success');
+                break;
+
+            case 'reboot':
+                this.terminalPrint(windowId, 'Riavvio del sistema in corso...', 'output');
+                this.showToast('Riavvio', 'Sistema in riavvio...', 'info');
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+                break;
+
+            case 'shutdown':
+                this.terminalPrint(windowId, 'Spegnimento del sistema...', 'output');
+                this.shutdown();
+                break;
+
+            case 'sudo': {
+                if (!args[0]) {
+                    this.terminalPrint(windowId, 'sudo: manca il comando', 'error');
+                    break;
+                }
+                this.terminalPrint(windowId, `[sudo] password for utente:`, 'output');
+                this.terminalPrint(windowId, `sudo: ${args.join(' ')}: comando simulato eseguito con privilegi`, 'output');
+                break;
+            }
+
+            case 'cowsay': {
+                const text = args.join(' ') || 'Moo!';
+                const cow = `
+ ${'_'.repeat(text.length + 2)}
+< ${text} >
+ ${'-'.repeat(text.length + 2)}
+        \\   ^__^
+         \\  (oo)\\_______
+            (__)\\       )\\/\\
+                ||----w |
+                ||     ||
+`;
+                this.terminalPrint(windowId, cow, 'output');
+                break;
+            }
+
+            case 'matrix': {
+                this.terminalPrint(windowId, 'Matrix mode activated! 🌟', 'welcome');
+                document.body.style.animation = 'matrixPulse 3s ease-in-out infinite';
+                setTimeout(() => {
+                    document.body.style.animation = '';
+                }, 5000);
+                break;
+            }
+
             default:
                 this.terminalPrint(windowId, `bash: ${cmd}: comando non trovato`, 'error');
         }
@@ -1814,7 +2007,7 @@ class AuraOSApp {
 
         let matches = [];
         if (isCommand) {
-            const commands = ['help', 'ls', 'cd', 'pwd', 'mkdir', 'touch', 'cat', 'echo', 'clear', 'whoami', 'date', 'neofetch', 'rm', 'history'];
+            const commands = ['help', 'ls', 'cd', 'pwd', 'mkdir', 'touch', 'cat', 'echo', 'clear', 'cls', 'whoami', 'date', 'neofetch', 'rm', 'history', 'hostname', 'uname', 'uptime', 'calc', 'weather', 'theme', 'apps', 'open', 'screenshot', 'reboot', 'shutdown', 'sudo', 'cowsay', 'matrix'];
             matches = commands.filter(c => c.startsWith(lastPart));
         } else if (folder && folder.children) {
             matches = Object.keys(folder.children).filter(name => name.startsWith(lastPart));
@@ -2497,6 +2690,9 @@ class AuraOSApp {
                 break;
             case 'app-store':
                 this.initAppStore(windowId);
+                break;
+            case 'plugin-manager':
+                this.initPluginManager(windowId);
                 break;
         }
     }
@@ -6411,14 +6607,39 @@ class AuraOSApp {
     // ===== Appearance / Settings =====
     getAppearanceContent(windowId) {
         const a = this.state.appearance;
+        const themes = [
+            { id: 'light', name: 'JeadOS Light', icon: '☀️', desc: 'Tema chiaro pulito' },
+            { id: 'dark', name: 'JeadOS Dark', icon: '🌙', desc: 'Tema scuro con accenti blu' },
+            { id: 'zorin-blue', name: 'Zorin Blue', icon: '💙', desc: 'Ispirato a Zorin OS' },
+            { id: 'aurora', name: 'Aurora', icon: '🌈', desc: 'Tema viola/rosa gradiente' },
+            { id: 'matrix', name: 'Matrix', icon: '🟢', desc: 'Tema verde/nero hacker' },
+            { id: 'auto', name: 'Auto', icon: '💻', desc: 'Segue le preferenze di sistema' },
+        ];
+        const themePreview = (themeId) => {
+            const colors = {
+                'light': 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                'dark': 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                'zorin-blue': 'linear-gradient(135deg, #1a3a5c 0%, #2193b0 50%, #6dd5ed 100%)',
+                'aurora': 'linear-gradient(135deg, #834d9b 0%, #d04ed6 50%, #667eea 100%)',
+                'matrix': 'linear-gradient(135deg, #0a0a0a 0%, #0f2027 50%, #003b00 100%)',
+                'auto': 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+            };
+            return `<div style="width: 40px; height: 40px; border-radius: 10px; background: ${colors[themeId] || colors.light}; border: 2px solid var(--auraos-border); box-shadow: 0 2px 8px rgba(0,0,0,0.15);"></div>`;
+        };
         return `
             <div class="settings-section">
                 <h3>🎨 Aspetto</h3>
                 <div class="settings-option">
                     <span class="settings-label">Tema</span>
-                    <div class="settings-control">
-                        ${['light', 'dark', 'auto'].map(t => `
-                            <button class="settings-btn ${a.theme === t ? 'active' : ''}" onclick="app.setAppearance('theme', '${t}')">${t === 'light' ? 'Chiaro' : t === 'dark' ? 'Scuro' : 'Auto'}</button>
+                    <div class="settings-control" style="flex-direction: column; gap: 8px; align-items: flex-start;">
+                        ${themes.map(t => `
+                            <button class="settings-btn ${a.theme === t.id ? 'active' : ''}" onclick="app.setAppearance('theme', '${t.id}')" style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: flex-start;">
+                                ${themePreview(t.id)}
+                                <div style="text-align: left;">
+                                    <div style="font-weight: 600;">${t.icon} ${t.name}</div>
+                                    <div style="font-size: 10px; opacity: 0.7; font-weight: normal;">${t.desc}</div>
+                                </div>
+                            </button>
                         `).join('')}
                     </div>
                 </div>
@@ -6500,11 +6721,246 @@ class AuraOSApp {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         let theme = a.theme;
         if (theme === 'auto') theme = prefersDark ? 'dark' : 'light';
+        document.body.classList.remove('dark-theme', 'theme-zorin-blue', 'theme-aurora', 'theme-matrix');
         if (theme === 'dark') {
             document.body.classList.add('dark-theme');
-        } else {
-            document.body.classList.remove('dark-theme');
+        } else if (theme === 'zorin-blue') {
+            document.body.classList.add('theme-zorin-blue');
+        } else if (theme === 'aurora') {
+            document.body.classList.add('theme-aurora');
+        } else if (theme === 'matrix') {
+            document.body.classList.add('theme-matrix');
         }
+    }
+
+    // ===== Plugin Manager =====
+    getPluginManagerContent(windowId) {
+        const plugins = this.getAvailablePlugins();
+        const installed = this.getInstalledPlugins();
+        const enabled = this.getEnabledPlugins();
+        
+        return `
+            <div class="plugin-manager-container" id="plugin-manager-${windowId}">
+                <div class="plugin-manager-header">
+                    <h3>🧩 Gestore Plugin</h3>
+                    <p style="color: var(--auraos-text-secondary); font-size: 13px;">Estendi AuraOS con plugin aggiuntivi</p>
+                </div>
+                <div class="plugin-manager-grid">
+                    ${plugins.map(plugin => {
+                        const isInstalled = installed.includes(plugin.id);
+                        const isEnabled = enabled.includes(plugin.id);
+                        return `
+                            <div class="plugin-card">
+                                <div class="plugin-card-icon">${plugin.icon}</div>
+                                <div class="plugin-card-name">${plugin.name}</div>
+                                <div class="plugin-card-desc">${plugin.description}</div>
+                                <div class="plugin-card-meta">
+                                    <span>v${plugin.version}</span>
+                                    <span>${plugin.author}</span>
+                                </div>
+                                <div class="plugin-card-actions">
+                                    ${!isInstalled ? 
+                                        `<button class="plugin-btn plugin-install" onclick="app.installPlugin('${plugin.id}', '${windowId}')">Installa</button>` :
+                                        isEnabled ?
+                                            `<button class="plugin-btn plugin-disable" onclick="app.disablePlugin('${plugin.id}', '${windowId}')">Disabilita</button>` :
+                                            `<button class="plugin-btn plugin-enable" onclick="app.enablePlugin('${plugin.id}', '${windowId}')">Abilita</button>
+                                             <button class="plugin-btn plugin-uninstall" onclick="app.uninstallPlugin('${plugin.id}', '${windowId}')">Disinstalla</button>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    initPluginManager(windowId) {
+    }
+
+    getAvailablePlugins() {
+        return [
+            {
+                id: 'hello-world',
+                name: 'Hello World',
+                icon: '👋',
+                description: 'Plugin di esempio che aggiunge una semplice app Hello World',
+                version: '1.0.0',
+                author: 'AuraOS Team',
+                category: 'Esempi'
+            },
+            {
+                id: 'extra-themes',
+                name: 'Temi Extra',
+                icon: '🎨',
+                description: 'Aggiunge 3 nuovi temi: Ocean, Sunset, Forest',
+                version: '1.0.0',
+                author: 'AuraOS Team',
+                category: 'Temi'
+            },
+            {
+                id: 'terminal-extras',
+                name: 'Terminal Extras',
+                icon: '⌨️',
+                description: 'Aggiunge 10 nuovi comandi al terminale',
+                version: '1.0.0',
+                author: 'AuraOS Team',
+                category: 'Produttività'
+            },
+            {
+                id: 'weather-pro',
+                name: 'Meteo Pro',
+                icon: '🌤️',
+                description: 'Previsioni meteo più dettagliate con dati orari',
+                version: '1.0.0',
+                author: 'AuraOS Team',
+                category: 'Utilità'
+            },
+            {
+                id: 'system-info',
+                name: 'Informazioni Sistema',
+                icon: '📊',
+                description: 'Mostra informazioni dettagliate sul sistema',
+                version: '1.0.0',
+                author: 'AuraOS Team',
+                category: 'Utilità'
+            },
+            {
+                id: 'quick-notes',
+                name: 'Note Rapide',
+                icon: '📝',
+                description: 'Aggiungi note rapide al desktop',
+                version: '1.0.0',
+                author: 'AuraOS Team',
+                category: 'Produttività'
+            },
+        ];
+    }
+
+    getInstalledPlugins() {
+        try {
+            const saved = localStorage.getItem('jeados_plugins');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveInstalledPlugins(plugins) {
+        localStorage.setItem('jeados_plugins', JSON.stringify(plugins));
+    }
+
+    getEnabledPlugins() {
+        try {
+            const saved = localStorage.getItem('jeados_plugins_enabled');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveEnabledPlugins(plugins) {
+        localStorage.setItem('jeados_plugins_enabled', JSON.stringify(plugins));
+    }
+
+    installPlugin(pluginId, windowId) {
+        const installed = this.getInstalledPlugins();
+        if (!installed.includes(pluginId)) {
+            installed.push(pluginId);
+            this.saveInstalledPlugins(installed);
+        }
+        const plugin = this.getAvailablePlugins().find(p => p.id === pluginId);
+        const pluginName = plugin ? plugin.name : pluginId;
+        this.showToast('Plugin Installato', `"${pluginName}" è stato installato.`, 'success');
+        this.addNotification('Plugin', `"${pluginName}" installato.`, 'info');
+        if (windowId) {
+            this.renderPluginManager(windowId);
+        }
+    }
+
+    uninstallPlugin(pluginId, windowId) {
+        const plugin = this.getAvailablePlugins().find(p => p.id === pluginId);
+        const pluginName = plugin ? plugin.name : pluginId;
+        if (!confirm(`Sei sicuro di voler disinstallare "${pluginName}"?`)) return;
+        let installed = this.getInstalledPlugins();
+        installed = installed.filter(id => id !== pluginId);
+        this.saveInstalledPlugins(installed);
+        let enabled = this.getEnabledPlugins();
+        enabled = enabled.filter(id => id !== pluginId);
+        this.saveEnabledPlugins(enabled);
+        this.showToast('Plugin Disinstallato', `"${pluginName}" è stato disinstallato.`, 'info');
+        if (windowId) {
+            this.renderPluginManager(windowId);
+        }
+    }
+
+    enablePlugin(pluginId, windowId) {
+        const enabled = this.getEnabledPlugins();
+        if (!enabled.includes(pluginId)) {
+            enabled.push(pluginId);
+            this.saveEnabledPlugins(enabled);
+        }
+        const plugin = this.getAvailablePlugins().find(p => p.id === pluginId);
+        const pluginName = plugin ? plugin.name : pluginId;
+        this.showToast('Plugin Abilitato', `"${pluginName}" è stato abilitato.`, 'success');
+        if (windowId) {
+            this.renderPluginManager(windowId);
+        }
+    }
+
+    disablePlugin(pluginId, windowId) {
+        let enabled = this.getEnabledPlugins();
+        enabled = enabled.filter(id => id !== pluginId);
+        this.saveEnabledPlugins(enabled);
+        const plugin = this.getAvailablePlugins().find(p => p.id === pluginId);
+        const pluginName = plugin ? plugin.name : pluginId;
+        this.showToast('Plugin Disabilitato', `"${pluginName}" è stato disabilitato.`, 'info');
+        if (windowId) {
+            this.renderPluginManager(windowId);
+        }
+    }
+
+    renderPluginManager(windowId) {
+        const container = document.getElementById(`plugin-manager-${windowId}`);
+        if (!container) return;
+        const plugins = this.getAvailablePlugins();
+        const installed = this.getInstalledPlugins();
+        const enabled = this.getEnabledPlugins();
+        
+        container.innerHTML = `
+            <div class="plugin-manager-container" id="plugin-manager-${windowId}">
+                <div class="plugin-manager-header">
+                    <h3>🧩 Gestore Plugin</h3>
+                    <p style="color: var(--auraos-text-secondary); font-size: 13px;">Estendi AuraOS con plugin aggiuntivi</p>
+                </div>
+                <div class="plugin-manager-grid">
+                    ${plugins.map(plugin => {
+                        const isInstalled = installed.includes(plugin.id);
+                        const isEnabled = enabled.includes(plugin.id);
+                        return `
+                            <div class="plugin-card">
+                                <div class="plugin-card-icon">${plugin.icon}</div>
+                                <div class="plugin-card-name">${plugin.name}</div>
+                                <div class="plugin-card-desc">${plugin.description}</div>
+                                <div class="plugin-card-meta">
+                                    <span>v${plugin.version}</span>
+                                    <span>${plugin.author}</span>
+                                </div>
+                                <div class="plugin-card-actions">
+                                    ${!isInstalled ? 
+                                        `<button class="plugin-btn plugin-install" onclick="app.installPlugin('${plugin.id}', '${windowId}')">Installa</button>` :
+                                        isEnabled ?
+                                            `<button class="plugin-btn plugin-disable" onclick="app.disablePlugin('${plugin.id}', '${windowId}')">Disabilita</button>` :
+                                            `<button class="plugin-btn plugin-enable" onclick="app.enablePlugin('${plugin.id}', '${windowId}')">Abilita</button>
+                                             <button class="plugin-btn plugin-uninstall" onclick="app.uninstallPlugin('${plugin.id}', '${windowId}')">Disinstalla</button>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
     }
 
     // ===== App Store =====
@@ -6521,41 +6977,81 @@ class AuraOSApp {
         localStorage.setItem('auraos_installed_apps', JSON.stringify(installed));
     }
 
-    installApp(appId) {
-        const installed = this.getInstalledApps();
-        if (!installed.includes(appId)) {
-            installed.push(appId);
-            this.saveInstalledApps(installed);
-        }
+    installApp(appId, windowId) {
         const appData = this.getAppStoreApps().find(a => a.id === appId);
-        if (appData && !this.desktopApps.find(a => a.id === appId)) {
-            this.desktopApps.push({
-                id: appData.id,
-                name: appData.name,
-                icon: appData.icon,
-                description: appData.description,
-            });
-        }
-        this.createDesktopIcons();
-        this.addStartMenuItem(appId);
         const appName = appData ? appData.name : appId;
-        this.showToast('App Installata', `"${appName}" è stata installata con successo.`, 'success');
-        this.addNotification('Installazione', `"${appName}" installata.`, 'info');
-        this.playSound('success');
+        const installBtn = document.querySelector(`#app-store-grid-${windowId} .app-store-card[onclick*="${appId}"] .app-store-card-btn.install, #app-store-featured-${windowId} .app-store-featured-btn[onclick*="${appId}"]`);
+        const originalText = installBtn ? installBtn.textContent : '';
+        
+        if (installBtn) {
+            installBtn.textContent = 'Installazione...';
+            installBtn.disabled = true;
+            installBtn.style.opacity = '0.7';
+        }
+        
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.floor(Math.random() * 25) + 10;
+            if (progress > 95) progress = 95;
+            if (installBtn) {
+                installBtn.textContent = `Installazione... ${progress}%`;
+            }
+        }, 200);
+        
+        setTimeout(() => {
+            clearInterval(progressInterval);
+            const installed = this.getInstalledApps();
+            if (!installed.includes(appId)) {
+                installed.push(appId);
+                this.saveInstalledApps(installed);
+            }
+            if (appData && !this.desktopApps.find(a => a.id === appId)) {
+                this.desktopApps.push({
+                    id: appData.id,
+                    name: appData.name,
+                    icon: appData.icon,
+                    description: appData.description,
+                });
+            }
+            this.createDesktopIcons();
+            this.addStartMenuItem(appId);
+            if (installBtn) {
+                installBtn.textContent = 'Apri';
+                installBtn.className = 'app-store-card-btn open';
+                installBtn.disabled = false;
+                installBtn.style.opacity = '1';
+                installBtn.setAttribute('onclick', `app.openApp('${appId}')`);
+                const extraBtn = installBtn.parentElement.querySelector('.app-store-card-btn.uninstall');
+                if (!extraBtn) {
+                    const uninstallBtn = document.createElement('button');
+                    uninstallBtn.className = 'app-store-card-btn uninstall';
+                    uninstallBtn.textContent = 'Disinstalla';
+                    uninstallBtn.setAttribute('onclick', `app.uninstallApp('${appId}', '${windowId}')`);
+                    installBtn.parentElement.appendChild(uninstallBtn);
+                }
+            }
+            this.showToast('App Installata', `"${appName}" è stata installata con successo.`, 'success');
+            this.addNotification('Installazione', `"${appName}" installata.`, 'info');
+            this.playSound('success');
+        }, 1500);
     }
 
-    uninstallApp(appId) {
+    uninstallApp(appId, windowId) {
+        const appData = this.getAppStoreApps().find(a => a.id === appId);
+        const appName = appData ? appData.name : appId;
+        if (!confirm(`Sei sicuro di voler disinstallare "${appName}"?`)) return;
         let installed = this.getInstalledApps();
         installed = installed.filter(id => id !== appId);
         this.saveInstalledApps(installed);
         this.desktopApps = this.desktopApps.filter(a => a.id !== appId);
         this.createDesktopIcons();
         this.removeStartMenuItem(appId);
-        const appData = this.getAppStoreApps().find(a => a.id === appId);
-        const appName = appData ? appData.name : appId;
         this.showToast('App Disinstallata', `"${appName}" è stata disinstallata.`, 'info');
         this.addNotification('Disinstallazione', `"${appName}" disinstallata.`, 'info');
         this.playSound('success');
+        if (windowId) {
+            this.renderAppStore(windowId);
+        }
     }
 
     isAppInstalled(appId) {
@@ -6564,48 +7060,53 @@ class AuraOSApp {
 
     getAppStoreApps() {
         return [
-            { id: 'file-manager', name: 'File e cartelle', icon: '📁', description: 'Gestisci i tuoi file in modo semplice e veloce', category: 'Utilità', rating: 5 },
-            { id: 'notepad', name: 'Blocco Note', icon: '📝', description: 'Scrivi appunti e note veloci', category: 'Produttività', rating: 4 },
-            { id: 'terminal', name: 'Terminale', icon: '💻', description: 'Usa la riga di comando come un professionista', category: 'Utilità', rating: 5 },
-            { id: 'browser', name: 'Internet', icon: '🌐', description: 'Esplora il web in modo sicuro', category: 'Utilità', rating: 4 },
-            { id: 'tutor', name: 'Tutor AI', icon: '🤖', description: 'Il tuo assistente virtuale intelligente', category: 'Educazione', rating: 5 },
-            { id: 'settings', name: 'Impostazioni', icon: '⚙️', description: 'Personalizza il tuo sistema', category: 'Utilità', rating: 4 },
-            { id: 'guide', name: 'Guida', icon: '📖', description: 'Impara come usare AuraOS', category: 'Educazione', rating: 5 },
-            { id: 'games', name: 'Giochi', icon: '🎮', description: 'Impara divertendoti con i giochi', category: 'Intrattenimento', rating: 4 },
-            { id: 'calculator', name: 'Calcolatrice', icon: '🧮', description: 'Fai calcoli veloci e complessi', category: 'Produttività', rating: 5 },
-            { id: 'gallery', name: 'Galleria', icon: '🖼️', description: 'Guarda le tue immagini', category: 'Grafica', rating: 4 },
-            { id: 'music', name: 'Musica', icon: '🎵', description: 'Ascolta la tua musica preferita', category: 'Intrattenimento', rating: 5 },
-            { id: 'app-store', name: 'App Store', icon: '🛒', description: 'Scarica nuove app e giochi', category: 'Utilità', rating: 5 },
-            { id: 'text-editor', name: 'Editor di Testo', icon: '📄', description: 'Editor avanzato con syntax highlighting', category: 'Produttività', rating: 4 },
-            { id: 'image-viewer', name: 'Visualizzatore Immagini', icon: '🖼️', description: 'Visualizza e modifica immagini', category: 'Grafica', rating: 4 },
-            { id: 'video-player', name: 'Video Player', icon: '🎬', description: 'Riproduci i tuoi video', category: 'Intrattenimento', rating: 4 },
-            { id: 'pdf-viewer', name: 'PDF Viewer', icon: '📕', description: 'Visualizza file PDF', category: 'Produttività', rating: 4 },
-            { id: 'archive-manager', name: 'Gestore Archivi', icon: '🗜️', description: 'Comprimi e decomprimi file', category: 'Utilità', rating: 4 },
-            { id: 'system-monitor', name: 'Monitor di Sistema', icon: '📈', description: 'Monitora CPU, RAM e disco', category: 'Utilità', rating: 5 },
-            { id: 'disk-usage', name: 'Utilizzo Disco', icon: '💾', description: 'Analizza lo spazio su disco', category: 'Utilità', rating: 4 },
-            { id: 'font-viewer', name: 'Visualizzatore Font', icon: '🔤', description: 'Esplora i font installati', category: 'Grafica', rating: 3 },
-            { id: 'screenshot', name: 'Screenshot', icon: '📸', description: 'Cattura schermate del desktop', category: 'Utilità', rating: 4 },
-            { id: 'screen-recorder', name: 'Registratore Schermo', icon: '🎥', description: 'Registra il tuo desktop', category: 'Intrattenimento', rating: 4 },
-            { id: 'weather-app', name: 'Meteo', icon: '🌤️', description: 'Previsioni meteo dettagliate', category: 'Utilità', rating: 4 },
-            { id: 'calendar', name: 'Calendario', icon: '📅', description: 'Gestisci eventi e appuntamenti', category: 'Produttività', rating: 4 },
-            { id: 'contacts', name: 'Contatti', icon: '👥', description: 'Gestisci i tuoi contatti', category: 'Produttività', rating: 4 },
-            { id: 'notes-app', name: 'Note', icon: '📓', description: 'Note avanzate con markdown', category: 'Produttività', rating: 4 },
-            { id: 'tasks', name: 'Attività', icon: '✅', description: 'Gestisci i tuoi task', category: 'Produttività', rating: 4 },
-            { id: 'code-editor', name: 'Editor di Codice', icon: '💻', description: 'Editor di codice professionale con evidenziazione della sintassi', category: 'Produttività', rating: 5 },
-            { id: 'password-manager', name: 'Gestore Password', icon: '🔐', description: 'Gestisci le tue password in sicurezza', category: 'Utilità', rating: 4 },
-            { id: 'email-client', name: 'Client Email', icon: '📧', description: 'Leggi e invia email', category: 'Produttività', rating: 4 },
-            { id: 'chat-app', name: 'Chat', icon: '💬', description: 'Messaggistica istantanea', category: 'Intrattenimento', rating: 4 },
-            { id: 'photo-editor', name: 'Editor Foto', icon: '🎨', description: 'Modifica e ritocca le tue foto', category: 'Grafica', rating: 5 },
-            { id: 'video-editor', name: 'Editor Video', icon: '🎬', description: 'Monta e modifica i tuoi video', category: 'Grafica', rating: 4 },
-            { id: '3d-viewer', name: 'Visualizzatore 3D', icon: '🧊', description: 'Visualizza modelli 3D', category: 'Grafica', rating: 3 },
-            { id: 'clock-app', name: 'Sveglia', icon: '⏰', description: 'Sveglia, timer e cronometro', category: 'Utilità', rating: 4 },
-            { id: 'map-app', name: 'Mappe', icon: '🗺️', description: 'Naviga e esplora le mappe', category: 'Utilità', rating: 4 },
-            { id: 'notes-pro', name: 'Note Pro', icon: '📒', description: 'Note professionali con organizzazione avanzata', category: 'Produttività', rating: 5 },
-            { id: 'whiteboard', name: 'Lavagna', icon: '📋', description: 'Lavagna digitale per disegnare e annotare', category: 'Educazione', rating: 4 },
-            { id: 'calibre', name: 'Lettore eBook', icon: '📚', description: 'Leggi i tuoi eBook preferiti', category: 'Intrattenimento', rating: 4 },
-            { id: 'scan-app', name: 'Scanner', icon: '📠', description: 'Scansiona documenti e immagini', category: 'Utilità', rating: 3 },
-            { id: 'remote-desktop', name: 'Desktop Remoto', icon: '🖥️', description: 'Connettiti a computer remoti', category: 'Utilità', rating: 3 },
-            { id: 'backup-app', name: 'Backup', icon: '💿', description: 'Esegui il backup dei tuoi dati', category: 'Utilità', rating: 4 },
+            { id: 'file-manager', name: 'File e cartelle', icon: '📁', description: 'Gestisci i tuoi file in modo semplice e veloce', category: 'Utilità', rating: 5, size: '12 MB', version: '1.0.0' },
+            { id: 'notepad', name: 'Blocco Note', icon: '📝', description: 'Scrivi appunti e note veloci', category: 'Produttività', rating: 4, size: '8 MB', version: '1.0.0' },
+            { id: 'terminal', name: 'Terminale', icon: '💻', description: 'Usa la riga di comando come un professionista', category: 'Utilità', rating: 5, size: '15 MB', version: '1.0.0' },
+            { id: 'browser', name: 'Internet', icon: '🌐', description: 'Esplora il web in modo sicuro', category: 'Utilità', rating: 4, size: '45 MB', version: '1.0.0' },
+            { id: 'tutor', name: 'Tutor AI', icon: '🤖', description: 'Il tuo assistente virtuale intelligente', category: 'Educazione', rating: 5, size: '25 MB', version: '1.0.0' },
+            { id: 'settings', name: 'Impostazioni', icon: '⚙️', description: 'Personalizza il tuo sistema', category: 'Utilità', rating: 4, size: '5 MB', version: '1.0.0' },
+            { id: 'guide', name: 'Guida', icon: '📖', description: 'Impara come usare AuraOS', category: 'Educazione', rating: 5, size: '10 MB', version: '1.0.0' },
+            { id: 'games', name: 'Giochi', icon: '🎮', description: 'Impara divertendoti con i giochi', category: 'Intrattenimento', rating: 4, size: '30 MB', version: '1.0.0' },
+            { id: 'calculator', name: 'Calcolatrice', icon: '🧮', description: 'Fai calcoli veloci e complessi', category: 'Produttività', rating: 5, size: '4 MB', version: '1.0.0' },
+            { id: 'gallery', name: 'Galleria', icon: '🖼️', description: 'Guarda le tue immagini', category: 'Grafica', rating: 4, size: '18 MB', version: '1.0.0' },
+            { id: 'music', name: 'Musica', icon: '🎵', description: 'Ascolta la tua musica preferita', category: 'Intrattenimento', rating: 5, size: '22 MB', version: '1.0.0' },
+            { id: 'app-store', name: 'App Store', icon: '🛒', description: 'Scarica nuove app e giochi', category: 'Utilità', rating: 5, size: '35 MB', version: '1.0.0' },
+            { id: 'text-editor', name: 'Editor di Testo', icon: '📄', description: 'Editor avanzato con syntax highlighting', category: 'Produttività', rating: 4, size: '16 MB', version: '1.0.0' },
+            { id: 'image-viewer', name: 'Visualizzatore Immagini', icon: '🖼️', description: 'Visualizza e modifica immagini', category: 'Grafica', rating: 4, size: '20 MB', version: '1.0.0' },
+            { id: 'video-player', name: 'Video Player', icon: '🎬', description: 'Riproduci i tuoi video', category: 'Intrattenimento', rating: 4, size: '28 MB', version: '1.0.0' },
+            { id: 'pdf-viewer', name: 'PDF Viewer', icon: '📕', description: 'Visualizza file PDF', category: 'Produttività', rating: 4, size: '14 MB', version: '1.0.0' },
+            { id: 'archive-manager', name: 'Gestore Archivi', icon: '🗜️', description: 'Comprimi e decomprimi file', category: 'Utilità', rating: 4, size: '10 MB', version: '1.0.0' },
+            { id: 'system-monitor', name: 'Monitor di Sistema', icon: '📈', description: 'Monitora CPU, RAM e disco', category: 'Utilità', rating: 5, size: '8 MB', version: '1.0.0' },
+            { id: 'disk-usage', name: 'Utilizzo Disco', icon: '💾', description: 'Analizza lo spazio su disco', category: 'Utilità', rating: 4, size: '6 MB', version: '1.0.0' },
+            { id: 'font-viewer', name: 'Visualizzatore Font', icon: '🔤', description: 'Esplora i font installati', category: 'Grafica', rating: 3, size: '9 MB', version: '1.0.0' },
+            { id: 'screenshot', name: 'Screenshot', icon: '📸', description: 'Cattura schermate del desktop', category: 'Utilità', rating: 4, size: '7 MB', version: '1.0.0' },
+            { id: 'screen-recorder', name: 'Registratore Schermo', icon: '🎥', description: 'Registra il tuo desktop', category: 'Intrattenimento', rating: 4, size: '24 MB', version: '1.0.0' },
+            { id: 'weather-app', name: 'Meteo', icon: '🌤️', description: 'Previsioni meteo dettagliate', category: 'Utilità', rating: 4, size: '11 MB', version: '1.0.0' },
+            { id: 'calendar', name: 'Calendario', icon: '📅', description: 'Gestisci eventi e appuntamenti', category: 'Produttività', rating: 4, size: '13 MB', version: '1.0.0' },
+            { id: 'contacts', name: 'Contatti', icon: '👥', description: 'Gestisci i tuoi contatti', category: 'Produttività', rating: 4, size: '9 MB', version: '1.0.0' },
+            { id: 'notes-app', name: 'Note', icon: '📓', description: 'Note avanzate con markdown', category: 'Produttività', rating: 4, size: '12 MB', version: '1.0.0' },
+            { id: 'tasks', name: 'Attività', icon: '✅', description: 'Gestisci i tuoi task', category: 'Produttività', rating: 4, size: '8 MB', version: '1.0.0' },
+            { id: 'code-editor', name: 'Editor di Codice', icon: '💻', description: 'Editor di codice professionale con evidenziazione della sintassi', category: 'Produttività', rating: 5, size: '35 MB', version: '2.0.0' },
+            { id: 'password-manager', name: 'Gestore Password', icon: '🔐', description: 'Gestisci le tue password in sicurezza', category: 'Utilità', rating: 4, size: '10 MB', version: '1.0.0' },
+            { id: 'email-client', name: 'Client Email', icon: '📧', description: 'Leggi e invia email', category: 'Produttività', rating: 4, size: '20 MB', version: '1.0.0' },
+            { id: 'chat-app', name: 'Chat', icon: '💬', description: 'Messaggistica istantanea', category: 'Intrattenimento', rating: 4, size: '18 MB', version: '1.0.0' },
+            { id: 'photo-editor', name: 'Editor Foto', icon: '🎨', description: 'Modifica e ritocca le tue foto', category: 'Grafica', rating: 5, size: '40 MB', version: '2.0.0' },
+            { id: 'video-editor', name: 'Editor Video', icon: '🎬', description: 'Monta e modifica i tuoi video', category: 'Grafica', rating: 4, size: '55 MB', version: '1.0.0' },
+            { id: '3d-viewer', name: 'Visualizzatore 3D', icon: '🧊', description: 'Visualizza modelli 3D', category: 'Grafica', rating: 3, size: '30 MB', version: '1.0.0' },
+            { id: 'clock-app', name: 'Sveglia', icon: '⏰', description: 'Sveglia, timer e cronometro', category: 'Utilità', rating: 4, size: '5 MB', version: '1.0.0' },
+            { id: 'map-app', name: 'Mappe', icon: '🗺️', description: 'Naviga e esplora le mappe', category: 'Utilità', rating: 4, size: '25 MB', version: '1.0.0' },
+            { id: 'notes-pro', name: 'Note Pro', icon: '📒', description: 'Note professionali con organizzazione avanzata', category: 'Produttività', rating: 5, size: '15 MB', version: '2.0.0' },
+            { id: 'whiteboard', name: 'Lavagna', icon: '📋', description: 'Lavagna digitale per disegnare e annotare', category: 'Educazione', rating: 4, size: '18 MB', version: '1.0.0' },
+            { id: 'calibre', name: 'Lettore eBook', icon: '📚', description: 'Leggi i tuoi eBook preferiti', category: 'Intrattenimento', rating: 4, size: '22 MB', version: '1.0.0' },
+            { id: 'scan-app', name: 'Scanner', icon: '📠', description: 'Scansiona documenti e immagini', category: 'Utilità', rating: 3, size: '12 MB', version: '1.0.0' },
+            { id: 'remote-desktop', name: 'Desktop Remoto', icon: '🖥️', description: 'Connettiti a computer remoti', category: 'Utilità', rating: 3, size: '20 MB', version: '1.0.0' },
+            { id: 'backup-app', name: 'Backup', icon: '💿', description: 'Esegui il backup dei tuoi dati', category: 'Utilità', rating: 4, size: '15 MB', version: '1.0.0' },
+            { id: 'paint-app', name: 'Paint', icon: '🖌️', description: 'Disegna e crea opere d\'arte digitale', category: 'Grafica', rating: 4, size: '16 MB', version: '1.0.0' },
+            { id: 'fitness-app', name: 'Fitness', icon: '💪', description: 'Traccia i tuoi allenamenti e rimani in forma', category: 'Utilità', rating: 4, size: '12 MB', version: '1.0.0' },
+            { id: 'camera-app', name: 'Fotocamera', icon: '📷', description: 'Scatta foto e registra video', category: 'Intrattenimento', rating: 4, size: '10 MB', version: '1.0.0' },
+            { id: 'reminder-app', name: 'Promemoria', icon: '⏰', description: 'Imposta promemoria e non dimenticare più nulla', category: 'Produttività', rating: 4, size: '6 MB', version: '1.0.0' },
+            { id: 'plugin-manager', name: 'Gestore Plugin', icon: '🧩', description: 'Gestisci e installa plugin per AuraOS' },
         ];
     }
 
@@ -6616,9 +7117,10 @@ class AuraOSApp {
         const featuredStars = this.getStarsHTML(featuredApp.rating);
 
         const categories = ['Tutte', 'Produttività', 'Educazione', 'Intrattenimento', 'Utilità', 'Grafica'];
-        const categoryButtons = categories.map((cat, idx) =>
-            `<button class="app-store-category-btn${idx === 0 ? ' active' : ''}" onclick="app.filterAppStore('${cat}', '${windowId}')">${cat}</button>`
-        ).join('');
+        const categoryButtons = categories.map((cat, idx) => {
+            const count = cat === 'Tutte' ? apps.length : apps.filter(a => a.category === cat).length;
+            return `<button class="app-store-category-btn${idx === 0 ? ' active' : ''}" onclick="app.filterAppStore('${cat}', '${windowId}')">${cat} (${count})</button>`;
+        }).join('');
 
         const appCards = apps.map(app => {
             const isInstalled = installed.includes(app.id);
@@ -6629,11 +7131,11 @@ class AuraOSApp {
                 ? `app.openApp('${app.id}')`
                 : `app.installApp('${app.id}', '${windowId}')`;
             const extraBtn = isInstalled
-                ? `<button class="app-store-card-btn uninstall" onclick="app.uninstallApp('${app.id}', '${windowId}')">Disinstalla</button>`
+                ? `<button class="app-store-card-btn uninstall" onclick="event.stopPropagation(); app.uninstallApp('${app.id}', '${windowId}')">Disinstalla</button>`
                 : '';
 
             return `
-                <div class="app-store-card">
+                <div class="app-store-card" onclick="app.showAppDetails('${app.id}', '${windowId}')">
                     <div class="app-store-card-icon">${app.icon}</div>
                     <div class="app-store-card-name">${app.name}</div>
                     <div class="app-store-card-desc">${app.description}</div>
@@ -6641,7 +7143,7 @@ class AuraOSApp {
                         <span class="app-store-card-rating">${stars}</span>
                         <span class="app-store-card-category">${app.category}</span>
                     </div>
-                    <button class="app-store-card-btn ${btnClass}" onclick="${btnAction}">${btnText}</button>
+                    <button class="app-store-card-btn ${btnClass}" onclick="event.stopPropagation(); ${btnAction}">${btnText}</button>
                     ${extraBtn}
                 </div>
             `;
@@ -6721,11 +7223,11 @@ class AuraOSApp {
                 ? `app.openApp('${app.id}')`
                 : `app.installApp('${app.id}', '${windowId}')`;
             const extraBtn = isInstalled
-                ? `<button class="app-store-card-btn uninstall" onclick="app.uninstallApp('${app.id}', '${windowId}')">Disinstalla</button>`
+                ? `<button class="app-store-card-btn uninstall" onclick="event.stopPropagation(); app.uninstallApp('${app.id}', '${windowId}')">Disinstalla</button>`
                 : '';
 
             return `
-                <div class="app-store-card">
+                <div class="app-store-card" onclick="app.showAppDetails('${app.id}', '${windowId}')">
                     <div class="app-store-card-icon">${app.icon}</div>
                     <div class="app-store-card-name">${app.name}</div>
                     <div class="app-store-card-desc">${app.description}</div>
@@ -6733,11 +7235,57 @@ class AuraOSApp {
                         <span class="app-store-card-rating">${stars}</span>
                         <span class="app-store-card-category">${app.category}</span>
                     </div>
-                    <button class="app-store-card-btn ${btnClass}" onclick="${btnAction}">${btnText}</button>
+                    <button class="app-store-card-btn ${btnClass}" onclick="event.stopPropagation(); ${btnAction}">${btnText}</button>
                     ${extraBtn}
                 </div>
             `;
         }).join('');
+    }
+
+    showAppDetails(appId, windowId) {
+        const appData = this.getAppStoreApps().find(a => a.id === appId);
+        if (!appData) return;
+        const installed = this.getInstalledApps();
+        const isInstalled = installed.includes(appId);
+        const stars = this.getStarsHTML(appData.rating);
+        
+        const container = document.getElementById(`app-store-grid-${windowId}`);
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="app-store-card" style="grid-column: 1 / -1; cursor: default;">
+                <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
+                    <div class="app-store-card-icon" style="font-size: 64px; width: 80px; height: 80px;">${appData.icon}</div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <div class="app-store-card-name" style="font-size: 20px; margin-bottom: 8px;">${appData.name}</div>
+                        <div class="app-store-card-desc" style="font-size: 14px; margin-bottom: 12px;">${appData.description}</div>
+                        <div class="app-store-card-meta" style="margin-bottom: 12px;">
+                            <span class="app-store-card-rating" style="font-size: 16px;">${stars} ${appData.rating}.0</span>
+                            <span class="app-store-card-category">${appData.category}</span>
+                            <span style="font-size: 11px; color: #64748b;">${appData.size || 'N/A'}</span>
+                            <span style="font-size: 11px; color: #64748b;">v${appData.version || '1.0.0'}</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;">
+                            <button class="app-store-card-btn ${isInstalled ? 'open' : 'install'}" onclick="app.installApp('${appId}', '${windowId}')">${isInstalled ? 'Apri' : 'Installa'}</button>
+                            ${isInstalled ? `<button class="app-store-card-btn uninstall" onclick="app.uninstallApp('${appId}', '${windowId}')">Disinstalla</button>` : ''}
+                            <button class="app-store-card-btn" onclick="app.renderAppStore('${windowId}')" style="background: rgba(255,255,255,0.7); color: #64748b; border: 1px solid var(--auraos-border);">← Torna all'elenco</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--auraos-border);">
+                    <h4 style="color: var(--auraos-text); margin-bottom: 12px; font-size: 14px;">📋 Descrizione</h4>
+                    <p style="color: var(--auraos-text-secondary); font-size: 13px; line-height: 1.7; margin-bottom: 16px;">${appData.description}</p>
+                    <h4 style="color: var(--auraos-text); margin-bottom: 12px; font-size: 14px;">📊 Informazioni</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 12px; color: var(--auraos-text-secondary);">
+                        <div><strong>Versione:</strong> ${appData.version || '1.0.0'}</div>
+                        <div><strong>Dimensione:</strong> ${appData.size || 'N/A'}</div>
+                        <div><strong>Categoria:</strong> ${appData.category}</div>
+                        <div><strong>Valutazione:</strong> ${stars} ${appData.rating}.0</div>
+                        <div><strong>Stato:</strong> ${isInstalled ? '✅ Installata' : '⬇ Disponibile'}</div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     filterAppStore(category, windowId) {
