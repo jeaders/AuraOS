@@ -1,0 +1,19 @@
+[Unit]
+Description=AuraOS Desktop Environment
+After=graphical.target lightdm.service
+
+[Service]
+Type=simple
+User=auraos
+Group=auraos
+Environment=DISPLAY=:0
+Environment=HOME=/home/auraos
+ExecStartPre=/bin/sleep 3
+ExecStart=/usr/bin/chromium --kiosk --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-restore-session-state --disable-translate --disable-sync --no-default-browser-check file:///opt/auraos/index.html
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

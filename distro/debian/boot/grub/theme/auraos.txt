@@ -1,0 +1,39 @@
+# AuraOS GRUB Theme Configuration
+
+desktop-color: "#0f172a"
+title-color: "#ffffff"
+title-font: "Sans Bold 32"
+message-font: "Sans Regular 16"
+message-color: "#cbd5e1"
+terminal-font: "Fixed Regular 16"
+terminal-box: "terminal_box_*.png"
+
++ item {
+    font = "Sans Bold 32"
+    color = "#ffffff"
+    width = 100%
+    align = 0
+    top = 35%
+    left = 0
+    text = "AuraOS"
+}
+
++ item {
+    font = "Sans Regular 16"
+    color = "#94a3b8"
+    width = 100%
+    align = 0
+    top = 43%
+    left = 0
+    text = "Sistema Operativo Linux Educativo"
+}
+
++ item {
+    font = "Sans Regular 12"
+    color = "#475569"
+    width = 100%
+    align = 0
+    top = 92%
+    left = 0
+    text = "Premi INVIO per avviare  |  e per opzioni avanzate"
+}

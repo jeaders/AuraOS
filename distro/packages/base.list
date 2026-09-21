@@ -1,0 +1,106 @@
+# AuraOS Real Distro Package Lists
+
+## Base System
+debootstrap
+systemd
+dbus
+linux-image-amd64
+linux-headers-amd64
+grub-pc
+grub-efi-amd64
+xorg
+lightdm
+
+## Desktop Environment
+xfce4
+xfce4-goodies
+xfce4-terminal
+thunar
+thunar-archive-plugin
+thunar-media-tags-plugin
+
+## Internet
+chromium
+chromium-l10n
+firefox-esr
+network-manager
+network-manager-gnome
+wget
+curl
+transmission
+transmission-gtk
+
+## Office
+libreoffice
+libreoffice-gtk3
+libreoffice-style-breeze
+evince
+eog
+gnome-screenshot
+flameshot
+
+## Graphics
+gimp
+inkscape
+scribus
+imagemagick
+darktable
+rawtherapee
+blender
+
+## Video/Audio
+ffmpeg
+vlc
+mpv
+audacity
+obs-studio
+youtube-dl
+
+## Development
+git
+vim
+nano
+htop
+neofetch
+build-essential
+python3
+python3-pip
+nodejs
+npm
+code
+
+## Utilities
+gparted
+gnome-disk-utility
+hardinfo
+lshw
+pciutils
+usbutils
+smartmontools
+ncdu
+baobab
+rclone
+deja-dup
+
+## Drivers (MacBook Pro 2011)
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+intel-microcode
+mesa-va-drivers
+mesa-vdpau-drivers
+va-driver-all
+intel-gpu-tools
+xbacklight
+brightnessctl
+tlp
+tlp-rdw
+thermald
+
+## System
+sudo
+locales
+tzdata
+ca-certificates
+gnupg
+apt-transport-https

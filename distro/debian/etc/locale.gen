@@ -1,0 +1,7 @@
+# Locale configuration
+en_US.UTF-8 UTF-8
+it_IT.UTF-8 UTF-8
+
+# Default locale
+LANG=en_US.UTF-8
+LC_ALL=en_US.UTF-8
