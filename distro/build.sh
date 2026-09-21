@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DISTRO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BUILD_DIR="${DISTRO_DIR}/build"
+BUILD_DIR="/tmp/auraos-build"
 ISO_OUTPUT="${DISTRO_DIR}/AuraOS-1.0-amd64.iso"
 
 echo "=== AuraOS Real Distro Build ==="
